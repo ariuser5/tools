@@ -5,7 +5,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>AskLlama.Cli</RootNamespace>
+    <RootNamespace>DCiuve.Tools.AskLlama.Cli</RootNamespace>
     <AssemblyName>askllama</AssemblyName>
   </PropertyGroup>
 
