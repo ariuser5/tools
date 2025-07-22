@@ -10,8 +10,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="scripts\hello.py">
+    <Content Include="scripts\fc.py">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="scripts\config.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="resources\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
