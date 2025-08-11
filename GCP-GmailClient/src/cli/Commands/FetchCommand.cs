@@ -1,7 +1,5 @@
-using Google.Apis.Gmail.v1;
 using DCiuve.Tools.Gcp.Gmail.Models;
 using DCiuve.Tools.Gcp.Gmail.Services;
-using DCiuve.Tools.Gcp.Gmail.Cli.Commands;
 using DCiuve.Tools.Logging;
 using System.Text.Json;
 

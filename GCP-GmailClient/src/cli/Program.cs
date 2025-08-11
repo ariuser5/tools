@@ -1,5 +1,4 @@
 using CommandLine;
-using Google.Apis.Auth.OAuth2;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Services;
 using DCiuve.Tools.Gcp.Auth;
@@ -54,7 +53,7 @@ class Program
     private static async Task<int> HandleFetchCommandAsync(FetchOptions options)
     {
         using var gmailService = await CreateGmailServiceAsync();
-        using var emailFetcher = new EmailFetcher(gmailService, _logger);
+        using var emailFetcher = new EmailFetcher(gmailService);
         
         var fetchCommand = new FetchCommand(emailFetcher, _logger);
         
@@ -76,8 +75,8 @@ class Program
     private static async Task<int> HandleSubscribeCommandAsync(SubscribeOptions options)
     {
         using var gmailService = await CreateGmailServiceAsync();
-        using var emailFetcher = new EmailFetcher(gmailService, _logger);
-        using var emailSubscriber = new EmailSubscriber(gmailService, emailFetcher, _logger);
+        using var emailFetcher = new EmailFetcher(gmailService);
+        using var emailSubscriber = new EmailSubscriber(gmailService, emailFetcher);
         
         var subscribeCommand = new SubscribeCommand(emailSubscriber, _logger);
         

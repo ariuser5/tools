@@ -1,7 +1,6 @@
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using DCiuve.Tools.Gcp.Gmail.Models;
-using DCiuve.Tools.Logging;
 using System.Text;
 
 namespace DCiuve.Tools.Gcp.Gmail.Services;
@@ -12,18 +11,15 @@ namespace DCiuve.Tools.Gcp.Gmail.Services;
 public class EmailFetcher : IDisposable
 {
     private readonly GmailService _gmailService;
-    private readonly ILogger _logger;
     private bool _disposed = false;
 
     /// <summary>
     /// Initializes a new instance of the EmailFetcher class.
     /// </summary>
     /// <param name="gmailService">The Gmail service instance.</param>
-    /// <param name="logger">The logger instance.</param>
-    public EmailFetcher(GmailService gmailService, ILogger logger)
+    public EmailFetcher(GmailService gmailService)
     {
         _gmailService = gmailService ?? throw new ArgumentNullException(nameof(gmailService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -31,52 +27,38 @@ public class EmailFetcher : IDisposable
     /// </summary>
     /// <param name="filter">The email filter to apply.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A list of email messages.</returns>
+    /// <returns>A list of email messages matching the filter.</returns>
     public async Task<List<EmailMessage>> FetchEmailsAsync(EmailFilter filter, CancellationToken cancellationToken = default)
     {
-        try
+        var request = _gmailService.Users.Messages.List("me");
+        request.Q = filter.BuildQuery();
+        request.MaxResults = filter.MaxResults;
+        request.IncludeSpamTrash = filter.IncludeSpamTrash;
+        request.PageToken = filter.PageToken;
+
+        if (filter.LabelIds.Any())
         {
-            _logger.Info($"Fetching emails with filter: {filter.BuildQuery()}");
-
-            var request = _gmailService.Users.Messages.List("me");
-            request.Q = filter.BuildQuery();
-            request.MaxResults = filter.MaxResults;
-            request.IncludeSpamTrash = filter.IncludeSpamTrash;
-            request.PageToken = filter.PageToken;
-
-            if (filter.LabelIds.Any())
-            {
-                request.LabelIds = filter.LabelIds;
-            }
-
-            var response = await request.ExecuteAsync(cancellationToken);
-            
-            if (response.Messages == null || !response.Messages.Any())
-            {
-                _logger.Info("No messages found matching the filter.");
-                return new List<EmailMessage>();
-            }
-
-            _logger.Info($"Found {response.Messages.Count} messages. Fetching details...");
-
-            var emails = new List<EmailMessage>();
-            foreach (var message in response.Messages)
-            {
-                var emailMessage = await GetEmailDetailsAsync(message.Id, cancellationToken);
-                if (emailMessage != null)
-                {
-                    emails.Add(emailMessage);
-                }
-            }
-
-            _logger.Info($"Successfully fetched {emails.Count} email details.");
-            return emails;
+            request.LabelIds = filter.LabelIds;
         }
-        catch (Exception ex)
+
+        var response = await request.ExecuteAsync(cancellationToken);
+        
+        if (response.Messages == null || !response.Messages.Any())
         {
-            _logger.Error($"Error fetching emails: {ex.Message}");
-            throw;
+            return new List<EmailMessage>();
         }
+
+        var emails = new List<EmailMessage>();
+        foreach (var message in response.Messages)
+        {
+            var email = await GetEmailDetailsAsync(message.Id, cancellationToken);
+            if (email != null)
+            {
+                emails.Add(email);
+            }
+        }
+
+        return emails;
     }
 
     /// <summary>
@@ -84,23 +66,15 @@ public class EmailFetcher : IDisposable
     /// </summary>
     /// <param name="messageId">The message ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The email message details or null if not found.</returns>
+    /// <returns>The email message details, or null if not found.</returns>
     public async Task<EmailMessage?> GetEmailDetailsAsync(string messageId, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var request = _gmailService.Users.Messages.Get("me", messageId);
-            request.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Full;
+        var request = _gmailService.Users.Messages.Get("me", messageId);
+        request.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Full;
 
-            var message = await request.ExecuteAsync(cancellationToken);
-            
-            return ConvertToEmailMessage(message);
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"Error getting email details for message {messageId}: {ex.Message}");
-            return null;
-        }
+        var message = await request.ExecuteAsync(cancellationToken);
+        
+        return ConvertToEmailMessage(message);
     }
 
     /// <summary>
@@ -110,16 +84,8 @@ public class EmailFetcher : IDisposable
     /// <returns>The user's email address.</returns>
     public async Task<string> GetUserEmailAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var profile = await _gmailService.Users.GetProfile("me").ExecuteAsync(cancellationToken);
-            return profile.EmailAddress;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"Error getting user email: {ex.Message}");
-            throw;
-        }
+        var profile = await _gmailService.Users.GetProfile("me").ExecuteAsync(cancellationToken);
+        return profile.EmailAddress;
     }
 
     /// <summary>

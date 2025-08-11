@@ -1,7 +1,6 @@
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using DCiuve.Tools.Gcp.Gmail.Models;
-using DCiuve.Tools.Logging;
 
 namespace DCiuve.Tools.Gcp.Gmail.Services;
 
@@ -12,7 +11,6 @@ public class EmailSubscriber : IDisposable
 {
     private readonly GmailService _gmailService;
     private readonly EmailFetcher _emailFetcher;
-    private readonly ILogger _logger;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private bool _disposed = false;
 
@@ -26,12 +24,10 @@ public class EmailSubscriber : IDisposable
     /// </summary>
     /// <param name="gmailService">The Gmail service instance.</param>
     /// <param name="emailFetcher">The email fetcher service.</param>
-    /// <param name="logger">The logger instance.</param>
-    public EmailSubscriber(GmailService gmailService, EmailFetcher emailFetcher, ILogger logger)
+    public EmailSubscriber(GmailService gmailService, EmailFetcher emailFetcher)
     {
         _gmailService = gmailService ?? throw new ArgumentNullException(nameof(gmailService));
         _emailFetcher = emailFetcher ?? throw new ArgumentNullException(nameof(emailFetcher));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _cancellationTokenSource = new CancellationTokenSource();
     }
 
@@ -44,31 +40,20 @@ public class EmailSubscriber : IDisposable
     /// <returns>The watch response from Gmail API.</returns>
     public async Task<WatchResponse> SetupPushNotificationAsync(EmailSubscription subscription, CancellationToken cancellationToken = default)
     {
-        try
+        var watchRequest = new WatchRequest
         {
-            _logger.Info($"Setting up Gmail watch for topic: {subscription.TopicName}");
+            TopicName = subscription.TopicName,
+            LabelIds = subscription.Filter.LabelIds.Any() ? subscription.Filter.LabelIds : null,
+            LabelFilterAction = "include"
+        };
 
-            var watchRequest = new WatchRequest
-            {
-                TopicName = subscription.TopicName,
-                LabelIds = subscription.Filter.LabelIds.Any() ? subscription.Filter.LabelIds : null,
-                LabelFilterAction = "include"
-            };
+        var request = _gmailService.Users.Watch(watchRequest, "me");
+        var response = await request.ExecuteAsync(cancellationToken);
 
-            var request = _gmailService.Users.Watch(watchRequest, "me");
-            var response = await request.ExecuteAsync(cancellationToken);
+        subscription.LastHistoryId = response.HistoryId;
+        subscription.LastUpdated = DateTime.UtcNow;
 
-            _logger.Info($"Gmail watch setup successful. History ID: {response.HistoryId}");
-            subscription.LastHistoryId = response.HistoryId;
-            subscription.LastUpdated = DateTime.UtcNow;
-
-            return response;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"Error setting up Gmail watch: {ex.Message}");
-            throw;
-        }
+        return response;
     }
 
     /// <summary>
@@ -77,20 +62,8 @@ public class EmailSubscriber : IDisposable
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task StopPushNotificationAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            _logger.Info("Stopping Gmail watch subscription...");
-            
-            var request = _gmailService.Users.Stop("me");
-            await request.ExecuteAsync(cancellationToken);
-            
-            _logger.Info("Gmail watch subscription stopped.");
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"Error stopping Gmail watch: {ex.Message}");
-            throw;
-        }
+        var request = _gmailService.Users.Stop("me");
+        await request.ExecuteAsync(cancellationToken);
     }
 
     /// <summary>
@@ -102,32 +75,18 @@ public class EmailSubscriber : IDisposable
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task StartPushNotificationListenerAsync(EmailSubscription subscription, CancellationToken cancellationToken = default)
     {
-        _logger.Info($"Starting push notification listener for topic: {subscription.TopicName}");
-        _logger.Info("Note: This assumes the Pub/Sub topic has been primed using GCP-PubSubPrimer.");
-
         var combinedToken = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken, _cancellationTokenSource.Token).Token;
 
-        try
+        // For push notifications, we mainly wait and let the Pub/Sub system
+        // deliver notifications to our webhook endpoint
+        // This method serves as a placeholder for future webhook integration
+        while (!combinedToken.IsCancellationRequested && subscription.IsActive)
         {
-            // For push notifications, we mainly wait and let the Pub/Sub system
-            // deliver notifications to our webhook endpoint
-            // This method serves as a placeholder for future webhook integration
-            while (!combinedToken.IsCancellationRequested && subscription.IsActive)
-            {
-                // In a real implementation, this would integrate with a webhook receiver
-                // For now, we'll do periodic checks as a fallback
-                await CheckForNewEmailsAsync(subscription, combinedToken);
-                await Task.Delay(TimeSpan.FromMinutes(1), combinedToken); // Much less frequent than polling
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.Info("Push notification listener stopped due to cancellation.");
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"Error in push notification listener: {ex.Message}");
+            // In a real implementation, this would integrate with a webhook receiver
+            // For now, we'll do periodic checks as a fallback
+            await CheckForNewEmailsAsync(subscription, combinedToken);
+            await Task.Delay(TimeSpan.FromMinutes(1), combinedToken); // Much less frequent than polling
         }
     }
 
@@ -138,26 +97,13 @@ public class EmailSubscriber : IDisposable
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task StartPollingAsync(EmailSubscription subscription, CancellationToken cancellationToken = default)
     {
-        _logger.Info($"Starting email polling with interval: {subscription.PollingIntervalSeconds} seconds");
-
         var combinedToken = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken, _cancellationTokenSource.Token).Token;
 
-        try
+        while (!combinedToken.IsCancellationRequested && subscription.IsActive)
         {
-            while (!combinedToken.IsCancellationRequested && subscription.IsActive)
-            {
-                await CheckForNewEmailsAsync(subscription, combinedToken);
-                await Task.Delay(TimeSpan.FromSeconds(subscription.PollingIntervalSeconds), combinedToken);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.Info("Email polling stopped due to cancellation.");
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"Error during email polling: {ex.Message}");
+            await CheckForNewEmailsAsync(subscription, combinedToken);
+            await Task.Delay(TimeSpan.FromSeconds(subscription.PollingIntervalSeconds), combinedToken);
         }
     }
 
@@ -168,20 +114,13 @@ public class EmailSubscriber : IDisposable
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task CheckForNewEmailsAsync(EmailSubscription subscription, CancellationToken cancellationToken = default)
     {
-        try
+        if (subscription.LastHistoryId.HasValue)
         {
-            if (subscription.LastHistoryId.HasValue)
-            {
-                await CheckHistoryForNewEmailsAsync(subscription, cancellationToken);
-            }
-            else
-            {
-                await CheckAllEmailsAsync(subscription, cancellationToken);
-            }
+            await CheckHistoryForNewEmailsAsync(subscription, cancellationToken);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.Error($"Error checking for new emails: {ex.Message}");
+            await CheckAllEmailsAsync(subscription, cancellationToken);
         }
     }
 
@@ -192,55 +131,47 @@ public class EmailSubscriber : IDisposable
     /// <param name="cancellationToken">Cancellation token.</param>
     private async Task CheckHistoryForNewEmailsAsync(EmailSubscription subscription, CancellationToken cancellationToken)
     {
-        try
+        var request = _gmailService.Users.History.List("me");
+        request.StartHistoryId = subscription.LastHistoryId;
+        request.HistoryTypes = UsersResource.HistoryResource.ListRequest.HistoryTypesEnum.MessageAdded;
+
+        var response = await request.ExecuteAsync(cancellationToken);
+
+        if (response.History == null || !response.History.Any())
         {
-            var request = _gmailService.Users.History.List("me");
-            request.StartHistoryId = subscription.LastHistoryId;
-            request.HistoryTypes = UsersResource.HistoryResource.ListRequest.HistoryTypesEnum.MessageAdded;
+            return;
+        }
 
-            var response = await request.ExecuteAsync(cancellationToken);
+        var newMessages = new List<EmailMessage>();
+        var latestHistoryId = subscription.LastHistoryId;
 
-            if (response.History == null || !response.History.Any())
+        foreach (var history in response.History)
+        {
+            if (history.Id > latestHistoryId)
             {
-                return;
+                latestHistoryId = history.Id;
             }
 
-            var newMessages = new List<EmailMessage>();
-            var latestHistoryId = subscription.LastHistoryId;
-
-            foreach (var history in response.History)
+            if (history.MessagesAdded != null)
             {
-                if (history.Id > latestHistoryId)
+                foreach (var messageAdded in history.MessagesAdded)
                 {
-                    latestHistoryId = history.Id;
-                }
-
-                if (history.MessagesAdded != null)
-                {
-                    foreach (var messageAdded in history.MessagesAdded)
+                    var email = await _emailFetcher.GetEmailDetailsAsync(messageAdded.Message.Id, cancellationToken);
+                    if (email != null && DoesEmailMatchFilter(email, subscription.Filter))
                     {
-                        var emailMessage = await _emailFetcher.GetEmailDetailsAsync(messageAdded.Message.Id, cancellationToken);
-                        if (emailMessage != null && DoesEmailMatchFilter(emailMessage, subscription.Filter))
-                        {
-                            newMessages.Add(emailMessage);
-                        }
+                        newMessages.Add(email);
                     }
                 }
             }
-
-            if (newMessages.Any())
-            {
-                _logger.Info($"Found {newMessages.Count} new emails matching subscription filter.");
-                NewEmailsReceived?.Invoke(this, newMessages);
-            }
-
-            subscription.LastHistoryId = latestHistoryId;
-            subscription.LastUpdated = DateTime.UtcNow;
         }
-        catch (Exception ex)
+
+        if (newMessages.Any())
         {
-            _logger.Error($"Error checking history for new emails: {ex.Message}");
+            NewEmailsReceived?.Invoke(this, newMessages);
         }
+
+        subscription.LastHistoryId = latestHistoryId;
+        subscription.LastUpdated = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -250,24 +181,16 @@ public class EmailSubscriber : IDisposable
     /// <param name="cancellationToken">Cancellation token.</param>
     private async Task CheckAllEmailsAsync(EmailSubscription subscription, CancellationToken cancellationToken)
     {
-        try
+        var emails = await _emailFetcher.FetchEmailsAsync(subscription.Filter, cancellationToken);
+        
+        if (emails.Any())
         {
-            var emails = await _emailFetcher.FetchEmailsAsync(subscription.Filter, cancellationToken);
+            NewEmailsReceived?.Invoke(this, emails);
             
-            if (emails.Any())
-            {
-                _logger.Info($"Found {emails.Count} emails matching subscription filter.");
-                NewEmailsReceived?.Invoke(this, emails);
-                
-                // Update the history ID to the latest message
-                var latestHistoryId = emails.Max(e => e.HistoryId);
-                subscription.LastHistoryId = latestHistoryId;
-                subscription.LastUpdated = DateTime.UtcNow;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"Error checking all emails: {ex.Message}");
+            // Update the history ID to the latest message
+            var latestHistoryId = emails.Max(e => e.HistoryId);
+            subscription.LastHistoryId = latestHistoryId;
+            subscription.LastUpdated = DateTime.UtcNow;
         }
     }
 
@@ -320,7 +243,6 @@ public class EmailSubscriber : IDisposable
     public void StopPolling()
     {
         _cancellationTokenSource.Cancel();
-        _logger.Info("Email polling stop requested.");
     }
 
     /// <summary>
