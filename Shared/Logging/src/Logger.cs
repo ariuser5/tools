@@ -1,17 +1,20 @@
-namespace DCiuve.Tools.Gcp.PubSub.Cli;
+namespace DCiuve.Tools.Logging;
 
-public enum LogLevel
+/// <summary>
+/// A simple console logger with colored output and configurable verbosity.
+/// </summary>
+public class Logger : ILogger
 {
-    Error = 0,
-    Warning = 1,
-    Info = 2,
-    Debug = 3
-}
-
-public class Logger
-{
+    /// <summary>
+    /// Gets or sets the minimum log level that will be output.
+    /// </summary>
     public LogLevel Verbosity { get; set; } = LogLevel.Info;
 
+    /// <summary>
+    /// Logs an error message in red.
+    /// </summary>
+    /// <param name="message">The message template.</param>
+    /// <param name="args">Optional formatting arguments.</param>
     public void Error(string message, params object[] args)
     {
         if (Verbosity >= LogLevel.Error)
@@ -21,6 +24,11 @@ public class Logger
         }
     }
 
+    /// <summary>
+    /// Logs a warning message in yellow.
+    /// </summary>
+    /// <param name="message">The message template.</param>
+    /// <param name="args">Optional formatting arguments.</param>
     public void Warning(string message, params object[] args)
     {
         if (Verbosity >= LogLevel.Warning)
@@ -30,6 +38,11 @@ public class Logger
         }
     }
 
+    /// <summary>
+    /// Logs an informational message in white.
+    /// </summary>
+    /// <param name="message">The message template.</param>
+    /// <param name="args">Optional formatting arguments.</param>
     public void Info(string message, params object[] args)
     {
         if (Verbosity >= LogLevel.Info)
@@ -39,6 +52,11 @@ public class Logger
         }
     }
 
+    /// <summary>
+    /// Logs a debug message in gray.
+    /// </summary>
+    /// <param name="message">The message template.</param>
+    /// <param name="args">Optional formatting arguments.</param>
     public void Debug(string message, params object[] args)
     {
         if (Verbosity >= LogLevel.Debug)
@@ -48,6 +66,11 @@ public class Logger
         }
     }
 
+    /// <summary>
+    /// Writes a colored line to the console, preserving the original color.
+    /// </summary>
+    /// <param name="message">The message to write.</param>
+    /// <param name="color">The color to use for the message.</param>
     private static void WriteColoredLine(string message, ConsoleColor color)
     {
         var originalColor = Console.ForegroundColor;

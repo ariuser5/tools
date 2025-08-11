@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.Auth", "..\..\GCP-Auth\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.PubSub", "lib\Gcp.PubSub.csproj", "{9738A532-43EA-4A01-B133-FA4658FA632A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DCiuve.Tools.Logging", "..\..\Shared\Logging\src\DCiuve.Tools.Logging.csproj", "{5BBB1B99-33A9-4D46-8359-595721F8B746}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{9738A532-43EA-4A01-B133-FA4658FA632A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9738A532-43EA-4A01-B133-FA4658FA632A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9738A532-43EA-4A01-B133-FA4658FA632A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BBB1B99-33A9-4D46-8359-595721F8B746}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BBB1B99-33A9-4D46-8359-595721F8B746}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BBB1B99-33A9-4D46-8359-595721F8B746}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BBB1B99-33A9-4D46-8359-595721F8B746}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

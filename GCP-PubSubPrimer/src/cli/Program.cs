@@ -2,6 +2,7 @@
 using DCiuve.Tools.Gcp.Auth;
 using DCiuve.Tools.Gcp.PubSub.Cli;
 using DCiuve.Tools.Gcp.PubSub;
+using DCiuve.Tools.Logging;
 using CommandLine;
 using System.Reflection;
 using Google.Apis.Gmail.v1;
