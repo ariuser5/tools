@@ -12,4 +12,8 @@
     <PackageReference Include="Google.Apis.Gmail.v1" Version="1.68.0.3556" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\GCP-ExtensionDomain\src\Gcp.ExtensionDomain.csproj" />
+  </ItemGroup>
+
 </Project>
