@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Gcp.Gmail.Models;
+namespace DCiuve.Tools.Gcp.Mailflow.Models;
 
 /// <summary>
 /// Represents an email message with simplified properties.

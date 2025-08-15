@@ -1,7 +1,7 @@
 
-using DCiuve.Tools.Gcp.Gmail.Models;
+using DCiuve.Tools.Gcp.Mailflow.Models;
 
-namespace DCiuve.Tools.Gcp.Gmail.Cli.Commands;
+namespace DCiuve.Tools.Gcp.Mailflow.Cli.Commands;
 
 static class GmailFilterOptionsExtensions
 {

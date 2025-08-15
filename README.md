@@ -7,7 +7,7 @@ A collection of command-line tools for Google Cloud Platform integration and oth
 ### GCP Tools
 - **[GCP-Auth](./GCP-Auth/)** - Google Cloud authentication library
 - **[GCP-ExtensionDomain](./GCP-ExtensionDomain/)** - Shared interfaces for GCP services
-- **[GCP-GmailClient](./GCP-GmailClient/)** - Gmail CLI for email management and monitoring
+- **[GCP-Mailflow](./GCP-Mailflow/)** - Gmail CLI for email management and monitoring
 - **[GCP-PubSubPrimer](./GCP-PubSubPrimer/)** - Gmail watch setup for push notifications
 
 ### Other Tools
@@ -35,9 +35,11 @@ A collection of command-line tools for Google Cloud Platform integration and oth
    .\pub-sub-prime.exe watch gmail --project-id "your-project" --topic-id "gmail-notifications"
    
    # Monitor emails
-   .\gmailcli.exe subscribe --name "monitor" --push --topic "projects/your-project/topics/gmail-notifications"
+   .\mailflow.exe subscribe --name "monitor" --push --topic "projects/your-project/topics/gmail-notifications"
    ```
 
 ---
 
-TODO: Update GmailClient "setup-watch" to support "once" and "auto" modes instead of just true/false.
+TODO: 
+1. Rename gmailcli to mailflow. ✅ DONE
+2. See if you can split the two subscribe methods: polling and push;

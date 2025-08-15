@@ -45,5 +45,5 @@ $env:GCP_PUBSUB_TOPICID = "gmail-notifications"
 
 2. **Use in other tools**:
    ```powershell
-   .\gmailcli.exe subscribe --push --topic "projects/my-project/topics/gmail-notifications"
+   .\mailflow.exe subscribe --push --topic "projects/my-project/topics/gmail-notifications"
    ```

@@ -1,6 +1,6 @@
-using DCiuve.Tools.Gcp.Gmail.Models;
+using DCiuve.Tools.Gcp.Mailflow.Models;
 
-namespace DCiuve.Tools.Gcp.Gmail.Services;
+namespace DCiuve.Tools.Gcp.Mailflow.Services;
 
 /// <summary>
 /// Service for managing push notification subscriptions via Pub/Sub.

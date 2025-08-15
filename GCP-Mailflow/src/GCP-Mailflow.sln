@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.Gmail", "lib\Gcp.Gmail.csproj", "{3098ECFC-1DE6-40E8-8F36-01ECC5204721}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.Mailflow", "lib\Gcp.Mailflow.csproj", "{3098ECFC-1DE6-40E8-8F36-01ECC5204721}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gmailcli", "cli\gmailcli.csproj", "{566C85D7-585E-47AB-8E7F-FE2687B5FD62}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mailflow", "cli\mailflow.csproj", "{566C85D7-585E-47AB-8E7F-FE2687B5FD62}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.PubSub", "..\..\GCP-PubSubPrimer\src\lib\Gcp.PubSub.csproj", "{F12F4B1B-2253-4395-98B4-7F826BA9DC0F}"
 EndProject

@@ -2,7 +2,7 @@ using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using DCiuve.Tools.Gcp.PubSub;
 
-namespace DCiuve.Tools.Gcp.Gmail.Services;
+namespace DCiuve.Tools.Gcp.Mailflow.Services;
 
 /// <summary>
 /// Helper class for Gmail watch operations using PubSubPrimer library.

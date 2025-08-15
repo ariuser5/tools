@@ -1,10 +1,10 @@
 using CommandLine;
-using DCiuve.Tools.Gcp.Gmail.Models;
-using DCiuve.Tools.Gcp.Gmail.Services;
+using DCiuve.Tools.Gcp.Mailflow.Models;
+using DCiuve.Tools.Gcp.Mailflow.Services;
 using DCiuve.Tools.Logging;
 using System.Text.Json;
 
-namespace DCiuve.Tools.Gcp.Gmail.Cli.Commands;
+namespace DCiuve.Tools.Gcp.Mailflow.Cli.Commands;
 
 /// <summary>
 /// Command for fetching emails from Gmail.
