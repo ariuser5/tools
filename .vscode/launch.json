@@ -53,6 +53,19 @@
             "console": "integratedTerminal",
             "stopAtEntry": false,
             "env": {}
+        },
+        {
+            "name": "Debug Mailflow - Fetch",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0/mailflow.exe",
+            "args": [
+                "fetch",
+                "--verbose", "3"
+            ],
+            "cwd": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
         }
 	]
 }
