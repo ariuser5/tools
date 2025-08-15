@@ -1,4 +1,4 @@
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
 
 namespace DCiuve.Tools.Gcp.PubSub.Cli;
 

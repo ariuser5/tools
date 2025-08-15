@@ -1,7 +1,7 @@
 using DCiuve.Tools.Gcp.ExtensionDomain;
 using DCiuve.Tools.Gcp.Mailflow.Services;
 using DCiuve.Tools.Gcp.PubSub;
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
 using Google.Apis.Gmail.v1;
 
 namespace DCiuve.Tools.Gcp.Mailflow.Cli.Services;

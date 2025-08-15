@@ -1,7 +1,7 @@
 using DCiuve.Tools.Gcp.Auth;
 using DCiuve.Tools.Gcp.ExtensionDomain;
 using DCiuve.Tools.Gcp.PubSub.Cli.Gmail;
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
 using Google.Apis.Http;
 
 namespace DCiuve.Tools.Gcp.PubSub.Cli;

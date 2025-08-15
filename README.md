@@ -15,7 +15,7 @@ A collection of command-line tools for Google Cloud Platform integration and oth
 - **[GithubApiClient](./GithubApiClient/)** - GitHub API client
 
 ### Shared
-- **[Shared/Logging](./Shared/Logging/)** - Console logger with colors
+- **[DCiuve-Shared](./DCiuve-Shared/)** - Console logger with colors
 
 ## Quick Start
 

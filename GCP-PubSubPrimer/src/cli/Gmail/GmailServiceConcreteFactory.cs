@@ -1,5 +1,5 @@
 using DCiuve.Tools.Gcp.ExtensionDomain;
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Http;
 

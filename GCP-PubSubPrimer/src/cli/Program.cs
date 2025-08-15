@@ -1,5 +1,5 @@
 ﻿using DCiuve.Tools.Gcp.PubSub.Cli;
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
 using CommandLine;
 
 const string defaultApplicationName = "MyApp-PubSubPrimer";

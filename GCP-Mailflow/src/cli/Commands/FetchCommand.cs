@@ -1,7 +1,7 @@
 using CommandLine;
 using DCiuve.Tools.Gcp.Mailflow.Models;
 using DCiuve.Tools.Gcp.Mailflow.Services;
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
 using System.Text.Json;
 
 namespace DCiuve.Tools.Gcp.Mailflow.Cli.Commands;

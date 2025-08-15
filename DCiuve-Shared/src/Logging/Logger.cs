@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Logging;
+namespace DCiuve.Shared.Logging;
 
 /// <summary>
 /// A simple console logger with colored output and configurable verbosity.

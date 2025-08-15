@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Logging;
+namespace DCiuve.Shared.Logging;
 
 /// <summary>
 /// Interface for logging functionality.

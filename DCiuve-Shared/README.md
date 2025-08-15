@@ -1,4 +1,4 @@
-# DCiuve.Tools.Logging
+# DCiuve.Shared.Logging
 
 A simple, colored console logger for .NET applications with configurable verbosity levels.
 
@@ -12,7 +12,7 @@ A simple, colored console logger for .NET applications with configurable verbosi
 ## Usage
 
 ```csharp
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
 
 var logger = new Logger
 {

@@ -4,7 +4,7 @@ using Google.Apis.Services;
 using DCiuve.Tools.Gcp.Auth;
 using DCiuve.Tools.Gcp.Mailflow.Services;
 using DCiuve.Tools.Gcp.Mailflow.Cli.Commands;
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
 
 namespace DCiuve.Tools.Gcp.Mailflow.Cli;
 

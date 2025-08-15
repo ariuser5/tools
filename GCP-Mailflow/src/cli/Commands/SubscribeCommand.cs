@@ -2,7 +2,7 @@ using CommandLine;
 using DCiuve.Tools.Gcp.Mailflow.Cli.Services;
 using DCiuve.Tools.Gcp.Mailflow.Models;
 using DCiuve.Tools.Gcp.Mailflow.Services;
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
 using Google.Apis.Gmail.v1;
 using System.Text.RegularExpressions;
 

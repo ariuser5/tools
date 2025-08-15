@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.Auth", "..\..\GCP-Auth\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.PubSub", "lib\Gcp.PubSub.csproj", "{9738A532-43EA-4A01-B133-FA4658FA632A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DCiuve.Tools.Logging", "..\..\Shared\Logging\src\DCiuve.Tools.Logging.csproj", "{5BBB1B99-33A9-4D46-8359-595721F8B746}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DCiuve.Shared", "..\..\DCiuve-Shared\src\DCiuve.Shared.csproj", "{5BBB1B99-33A9-4D46-8359-595721F8B746}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.ExtensionDomain", "..\..\GCP-ExtensionDomain\src\Gcp.ExtensionDomain.csproj", "{64CC2927-4482-4D5B-9BF4-E59721A9FAF8}"
 EndProject
