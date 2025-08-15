@@ -1,3 +1,4 @@
+using CommandLine;
 using DCiuve.Tools.Gcp.Gmail.Models;
 using DCiuve.Tools.Gcp.Gmail.Services;
 using DCiuve.Tools.Logging;
@@ -6,24 +7,27 @@ using System.Text.Json;
 namespace DCiuve.Tools.Gcp.Gmail.Cli.Commands;
 
 /// <summary>
-/// Handler for the fetch command.
+/// Command for fetching emails from Gmail.
 /// </summary>
-public class FetchCommand
+[Verb("fetch", HelpText = "Fetch emails from Gmail based on specified criteria. The --query and individual filter flags can be combined for comprehensive filtering.")]
+public class FetchOptions : GmailFilterOptions
 {
-    private readonly EmailFetcher _emailFetcher;
-    private readonly ILogger _logger;
+	[Option('m', "max", Required = false, Default = 10, HelpText = "Maximum number of emails to fetch.")]
+	public int MaxResults { get; set; } = 10;
 
-    /// <summary>
-    /// Initializes a new instance of the FetchCommand class.
-    /// </summary>
-    /// <param name="emailFetcher">The email fetcher service.</param>
-    /// <param name="logger">The logger instance.</param>
-    public FetchCommand(EmailFetcher emailFetcher, ILogger logger)
-    {
-        _emailFetcher = emailFetcher ?? throw new ArgumentNullException(nameof(emailFetcher));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+	[Option('o', "output", Required = false, HelpText = "Output format: console, json, csv.")]
+	public string OutputFormat { get; set; } = "console";
 
+	[Option("page-token", Required = false, HelpText = "Page token for pagination.")]
+	public string? PageToken { get; set; }
+
+	[Option('v', "verbose", Required = false, Default = false, HelpText = "Show detailed email content.")]
+	public bool Verbose { get; set; } = false;
+}
+
+
+public class FetchCommand(EmailFetcher emailFetcher, ILogger logger)
+{
     /// <summary>
     /// Executes the fetch command.
     /// </summary>
@@ -34,67 +38,36 @@ public class FetchCommand
     {
         try
         {
-            _logger.Info("Starting email fetch operation...");
+            logger.Info("Starting email fetch operation...");
 
-            var filter = BuildEmailFilter(options);
-            var emails = await _emailFetcher.FetchEmailsAsync(filter, cancellationToken);
+            // Use the extension method to convert to EmailFilter
+            // Both --query and individual flags will be combined for comprehensive filtering
+            var filter = options.ToEmailFilter(options.MaxResults, options.PageToken);
 
-            if (!emails.Any())
+            if (filter.MaxResults <= 0)
             {
-                _logger.Info("No emails found matching the specified criteria.");
+                logger.Warning("MaxResults is set to 0 or less. No emails will be fetched.");
+                return 0;
+            }
+
+            var emails = await emailFetcher.FetchEmailsAsync(filter, cancellationToken);
+
+            if (emails.Count == 0)
+            {
+                logger.Info("No emails found matching the specified criteria.");
                 return 0;
             }
 
             await OutputEmailsAsync(emails, options);
-            
-            _logger.Info($"Successfully fetched {emails.Count} emails.");
+
+            logger.Info($"Successfully fetched {emails.Count} emails.");
             return 0;
         }
         catch (Exception ex)
         {
-            _logger.Error($"Error executing fetch command: {ex.Message}");
+            logger.Error($"Error executing fetch command: {ex.Message}");
             return 1;
         }
-    }
-
-    /// <summary>
-    /// Builds an EmailFilter from the command options.
-    /// </summary>
-    /// <param name="options">The fetch command options.</param>
-    /// <returns>The constructed EmailFilter.</returns>
-    private EmailFilter BuildEmailFilter(FetchOptions options)
-    {
-        var filter = new EmailFilter
-        {
-            Query = options.Query,
-            MaxResults = options.MaxResults,
-            UnreadOnly = options.UnreadOnly,
-            FromEmail = options.FromEmail,
-            Subject = options.Subject,
-            IncludeSpamTrash = options.IncludeSpamTrash,
-            PageToken = options.PageToken
-        };
-
-        // Parse date filters
-        if (!string.IsNullOrEmpty(options.DateAfter) && DateTime.TryParse(options.DateAfter, out var dateAfter))
-        {
-            filter.DateStart = dateAfter;
-        }
-
-        if (!string.IsNullOrEmpty(options.DateBefore) && DateTime.TryParse(options.DateBefore, out var dateBefore))
-        {
-            filter.DateEnd = dateBefore;
-        }
-
-        // Parse label IDs
-        if (!string.IsNullOrEmpty(options.Labels))
-        {
-            filter.LabelIds = options.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(l => l.Trim())
-                .ToList();
-        }
-
-        return filter;
     }
 
     /// <summary>
@@ -102,28 +75,27 @@ public class FetchCommand
     /// </summary>
     /// <param name="emails">The emails to output.</param>
     /// <param name="options">The fetch command options.</param>
-    private async Task OutputEmailsAsync(List<EmailMessage> emails, FetchOptions options)
+    private static Task OutputEmailsAsync(List<EmailMessage> emails, FetchOptions options)
     {
         switch (options.OutputFormat.ToLowerInvariant())
         {
             case "json":
-                await OutputAsJsonAsync(emails);
-                break;
+                return OutputAsJsonAsync(emails);
             case "csv":
-                await OutputAsCsvAsync(emails);
-                break;
+                return OutputAsCsvAsync(emails);
             case "console":
             default:
                 OutputToConsole(emails, options.Verbose);
                 break;
         }
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Outputs emails as JSON.
     /// </summary>
     /// <param name="emails">The emails to output.</param>
-    private async Task OutputAsJsonAsync(List<EmailMessage> emails)
+    private static async Task OutputAsJsonAsync(List<EmailMessage> emails)
     {
         var jsonOptions = new JsonSerializerOptions
         {
@@ -140,18 +112,18 @@ public class FetchCommand
     /// Outputs emails as CSV.
     /// </summary>
     /// <param name="emails">The emails to output.</param>
-    private async Task OutputAsCsvAsync(List<EmailMessage> emails)
+    private static async Task OutputAsCsvAsync(List<EmailMessage> emails)
     {
         Console.WriteLine("Id,ThreadId,Subject,From,To,Date,IsUnread,Labels,Snippet");
-        
+
         foreach (var email in emails)
         {
             var labels = string.Join(";", email.Labels);
             var snippet = email.Snippet.Replace("\"", "\"\"").Replace("\n", " ").Replace("\r", " ");
-            
+
             Console.WriteLine($"\"{email.Id}\",\"{email.ThreadId}\",\"{email.Subject}\",\"{email.From}\",\"{email.To}\",\"{email.Date:yyyy-MM-dd HH:mm:ss}\",{email.IsUnread},\"{labels}\",\"{snippet}\"");
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -160,12 +132,12 @@ public class FetchCommand
     /// </summary>
     /// <param name="emails">The emails to output.</param>
     /// <param name="verbose">Whether to show detailed information.</param>
-    private void OutputToConsole(List<EmailMessage> emails, bool verbose)
+    private static void OutputToConsole(List<EmailMessage> emails, bool verbose)
     {
         for (int i = 0; i < emails.Count; i++)
         {
             var email = emails[i];
-            
+
             Console.WriteLine($"\n--- Email {i + 1} of {emails.Count} ---");
             Console.WriteLine($"ID: {email.Id}");
             Console.WriteLine($"Subject: {email.Subject}");
@@ -173,12 +145,12 @@ public class FetchCommand
             Console.WriteLine($"To: {email.To}");
             Console.WriteLine($"Date: {email.Date:yyyy-MM-dd HH:mm:ss}");
             Console.WriteLine($"Unread: {(email.IsUnread ? "Yes" : "No")}");
-            
-            if (email.Labels.Any())
+
+            if (email.Labels.Count > 0)
             {
                 Console.WriteLine($"Labels: {string.Join(", ", email.Labels)}");
             }
-            
+
             if (!string.IsNullOrEmpty(email.Snippet))
             {
                 Console.WriteLine($"Snippet: {email.Snippet}");

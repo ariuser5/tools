@@ -93,7 +93,7 @@ public class EmailFetcher : IDisposable
     /// </summary>
     /// <param name="message">The Gmail API message.</param>
     /// <returns>The converted EmailMessage.</returns>
-    private EmailMessage ConvertToEmailMessage(Message message)
+    private static EmailMessage ConvertToEmailMessage(Message message)
     {
         var emailMessage = new EmailMessage
         {
@@ -141,7 +141,7 @@ public class EmailFetcher : IDisposable
     /// </summary>
     /// <param name="payload">The message payload.</param>
     /// <returns>The extracted body content.</returns>
-    private string ExtractBodyContent(MessagePart? payload)
+    private static string ExtractBodyContent(MessagePart? payload)
     {
         if (payload == null)
             return string.Empty;
@@ -182,7 +182,8 @@ public class EmailFetcher : IDisposable
     {
         if (!_disposed)
         {
-            _gmailService?.Dispose();
+            // Note: We don't dispose _gmailService because it's injected as a dependency
+            // The creator/owner of the GmailService instance is responsible for disposing it
             _disposed = true;
         }
     }

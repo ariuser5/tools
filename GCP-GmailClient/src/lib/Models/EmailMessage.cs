@@ -3,7 +3,7 @@ namespace DCiuve.Tools.Gcp.Gmail.Models;
 /// <summary>
 /// Represents an email message with simplified properties.
 /// </summary>
-public class EmailMessage
+public record EmailMessage
 {
     /// <summary>
     /// Gets or sets the message ID.

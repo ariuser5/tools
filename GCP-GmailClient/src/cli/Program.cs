@@ -13,7 +13,7 @@ namespace DCiuve.Tools.Gcp.Gmail.Cli;
 /// </summary>
 class Program
 {
-    private static readonly ILogger _logger = new Logger();
+    private static readonly Logger _logger = new();
 
     /// <summary>
     /// Main entry point for the application.
@@ -52,20 +52,21 @@ class Program
     /// <returns>Exit code.</returns>
     private static async Task<int> HandleFetchCommandAsync(FetchOptions options)
     {
-        using var gmailService = await CreateGmailServiceAsync();
-        using var emailFetcher = new EmailFetcher(gmailService);
-        
-        var fetchCommand = new FetchCommand(emailFetcher, _logger);
-        
-        using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            cts.Cancel();
-        };
+		using var gmailService = await CreateGmailServiceAsync();
+		using var emailFetcher = new EmailFetcher(gmailService);
 
-        return await fetchCommand.ExecuteAsync(options, cts.Token);
-    }
+		var fetchCommand = new FetchCommand(emailFetcher, _logger);
+
+		using var cts = new CancellationTokenSource();
+		Console.CancelKeyPress += (_, e) =>
+		{
+			e.Cancel = true;
+            _logger.Info("Cancellation requested...");
+			cts.Cancel();
+		};
+
+		return await fetchCommand.ExecuteAsync(options, cts.Token);
+	}
 
     /// <summary>
     /// Handles the subscribe command.
@@ -74,34 +75,35 @@ class Program
     /// <returns>Exit code.</returns>
     private static async Task<int> HandleSubscribeCommandAsync(SubscribeOptions options)
     {
-        using var gmailService = await CreateGmailServiceAsync();
-        using var emailFetcher = new EmailFetcher(gmailService);
-        using var emailSubscriber = new EmailSubscriber(gmailService, emailFetcher);
-        
-        var subscribeCommand = new SubscribeCommand(emailSubscriber, _logger);
-        
-        using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            cts.Cancel();
-            _logger.Info("Cancellation requested...");
-        };
+		using var gmailService = await CreateGmailServiceAsync();
+		using var emailFetcher = new EmailFetcher(gmailService);
+		using var emailSubscriber = new EmailSubscriber();
+		using var emailPoller = new EmailPoller(gmailService, emailFetcher);
 
-        return await subscribeCommand.ExecuteAsync(options, cts.Token);
-    }
+		var subscribeCommand = new SubscribeCommand(emailSubscriber, emailPoller, gmailService, _logger);
+
+		using var cts = new CancellationTokenSource();
+		Console.CancelKeyPress += (_, e) =>
+		{
+			e.Cancel = true;
+			_logger.Info("Cancellation requested...");
+			cts.Cancel();
+		};
+
+		return await subscribeCommand.ExecuteAsync(options, cts.Token);
+	}
 
     /// <summary>
     /// Creates and configures a Gmail service instance.
     /// </summary>
-    /// <returns>The configured Gmail service.</returns>
+    /// <returns>A tuple containing the Gmail service and user credential.</returns>
     private static async Task<GmailService> CreateGmailServiceAsync()
     {
         try
         {
             _logger.Info("Authenticating with Google APIs...");
 
-            var scopes = new[] { GmailService.Scope.GmailReadonly, GmailService.Scope.GmailModify };
+            var scopes = new[] { GmailService.Scope.GmailReadonly };
             
             // Try to get credentials path from environment variable
             var secretPath = Environment.GetEnvironmentVariable("GCP_CREDENTIALS_PATH");
@@ -109,15 +111,18 @@ class Program
             {
                 throw new InvalidOperationException("GCP_CREDENTIALS_PATH environment variable not set");
             }
+            _logger.Debug($"Using credentials from: {secretPath}");
 
             // Authenticate using the static method
             using var secretStream = new FileStream(secretPath, FileMode.Open, FileAccess.Read);
             var credential = await Authenticator.Authenticate(secretStream, scopes);
 
+            _logger.Debug("Authentication successful.");
+
             var service = new GmailService(new BaseClientService.Initializer()
             {
                 HttpClientInitializer = credential,
-                ApplicationName = "Gmail Manager CLI"
+                ApplicationName = "Gmail Client CLI"
             });
 
             _logger.Info("Gmail service initialized successfully.");

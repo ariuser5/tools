@@ -1,38 +1,43 @@
 # GCP-ExtensionDomain
 
-Domain interfaces and contracts shared across all GCP extensions and services.
+Shared interfaces for all GCP service projects.
 
 ## Purpose
 
-This library provides the domain layer abstractions that ensure consistency across different GCP extension projects:
-
-- **Interfaces**: Common contracts for GCP services
-- **Models**: Shared data structures
-- **Constants**: Common configuration values
+Provides common contracts that all GCP services implement for consistency.
 
 ## Interfaces
 
-### IGcpApplicationService
-
-Exposes the ApplicationName used by Google API clients. Implement this interface in services that wrap Google API clients to provide access to the application name.
-
+### IGcpExtensionService
 ```csharp
-public class MyGmailService : IGcpApplicationService
+public interface IGcpExtensionService
 {
-    public string ApplicationName => "My Gmail App";
-    
-    // ... rest of implementation
+    string ApplicationName { get; }
+}
+```
+
+### IGcpApplicationService  
+```csharp
+public interface IGcpApplicationService
+{
+    string ApplicationName { get; }
 }
 ```
 
 ## Usage
 
-Add reference to this project in your GCP extension projects:
-
-```xml
-<ProjectReference Include="..\..\GCP-ExtensionDomain\src\DCiuve.Tools.Gcp.ExtensionDomain.csproj" />
+```csharp
+public class MyGcpService : IGcpExtensionService
+{
+    public string ApplicationName => "My Gmail App";
+    
+    // ... service implementation
+}
 ```
 
-## Target Framework
+## Integration
 
-- .NET 6.0 (compatible with all current GCP extension projects)
+Add reference in your GCP projects:
+```xml
+<ProjectReference Include="..\..\GCP-ExtensionDomain\src\Gcp.ExtensionDomain.csproj" />
+```
