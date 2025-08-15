@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace DCiuve.Tools.Gcp.PubSub;
+namespace DCiuve.Gcp.PubSub;
 
 /// <summary>
 /// Manages watch state persistence for any Google service.

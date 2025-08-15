@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>Gcp.PubSub</AssemblyName>
-    <RootNamespace>DCiuve.Tools.Gcp.PubSub</RootNamespace>
+    <RootNamespace>DCiuve.Gcp.PubSub</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

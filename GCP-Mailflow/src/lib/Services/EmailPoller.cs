@@ -1,7 +1,7 @@
 using Google.Apis.Gmail.v1;
-using DCiuve.Tools.Gcp.Mailflow.Models;
+using DCiuve.Gcp.Mailflow.Models;
 
-namespace DCiuve.Tools.Gcp.Mailflow.Services;
+namespace DCiuve.Gcp.Mailflow.Services;
 
 /// <summary>
 /// Service for polling Gmail for new emails based on filters or history tracking.

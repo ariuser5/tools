@@ -1,6 +1,6 @@
 using CommandLine;
 
-namespace DCiuve.Tools.Gcp.Mailflow.Cli.Commands;
+namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 
 public abstract class GmailFilterOptions
 {

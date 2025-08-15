@@ -1,9 +1,9 @@
-using DCiuve.Tools.Gcp.ExtensionDomain;
+using DCiuve.Gcp.ExtensionDomain;
 using DCiuve.Shared.Logging;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Http;
 
-namespace DCiuve.Tools.Gcp.PubSub.Cli.Gmail;
+namespace DCiuve.Gcp.PubSub.Cli.Gmail;
 
 /// <summary>
 /// Gmail-specific concrete factory that creates authenticated Gmail strategies.

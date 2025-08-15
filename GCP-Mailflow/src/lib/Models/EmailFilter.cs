@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Gcp.Mailflow.Models;
+namespace DCiuve.Gcp.Mailflow.Models;
 
 /// <summary>
 /// Represents a filter for querying emails.

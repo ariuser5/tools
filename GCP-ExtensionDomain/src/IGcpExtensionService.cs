@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Gcp.ExtensionDomain;
+namespace DCiuve.Gcp.ExtensionDomain;
 
 /// <summary>
 /// Interface for services that have an associated GCP application name.

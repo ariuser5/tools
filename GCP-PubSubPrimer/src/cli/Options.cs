@@ -1,6 +1,6 @@
 using CommandLine;
 
-namespace DCiuve.Tools.Gcp.PubSub.Cli;
+namespace DCiuve.Gcp.PubSub.Cli;
 
 public abstract class BaseOptions
 {

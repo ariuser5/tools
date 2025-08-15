@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Gcp.PubSub;
+namespace DCiuve.Gcp.PubSub;
 
 /// <summary>
 /// Generic watch state for any Google service.

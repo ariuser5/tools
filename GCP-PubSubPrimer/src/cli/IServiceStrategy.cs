@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Gcp.PubSub.Cli;
+namespace DCiuve.Gcp.PubSub.Cli;
 
 /// <summary>
 /// Strategy interface for different Google service operations.

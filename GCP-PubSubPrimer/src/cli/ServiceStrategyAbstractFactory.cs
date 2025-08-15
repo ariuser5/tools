@@ -1,10 +1,10 @@
-using DCiuve.Tools.Gcp.Auth;
-using DCiuve.Tools.Gcp.ExtensionDomain;
-using DCiuve.Tools.Gcp.PubSub.Cli.Gmail;
+using DCiuve.Gcp.Auth;
+using DCiuve.Gcp.ExtensionDomain;
+using DCiuve.Gcp.PubSub.Cli.Gmail;
 using DCiuve.Shared.Logging;
 using Google.Apis.Http;
 
-namespace DCiuve.Tools.Gcp.PubSub.Cli;
+namespace DCiuve.Gcp.PubSub.Cli;
 
 /// <summary>
 /// Main abstract factory that orchestrates the complete flow:

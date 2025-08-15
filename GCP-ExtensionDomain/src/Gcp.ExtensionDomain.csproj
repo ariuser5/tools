@@ -4,8 +4,8 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>DCiuve.Tools.Gcp.ExtensionDomain</AssemblyName>
-    <RootNamespace>DCiuve.Tools.Gcp.ExtensionDomain</RootNamespace>
+    <AssemblyName>DCiuve.Gcp.ExtensionDomain</AssemblyName>
+    <RootNamespace>DCiuve.Gcp.ExtensionDomain</RootNamespace>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <Authors>DCiuve</Authors>
     <Description>Domain interfaces and contracts for GCP extensions and services</Description>

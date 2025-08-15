@@ -1,5 +1,5 @@
 
-namespace DCiuve.Tools.Gcp.ExtensionDomain;
+namespace DCiuve.Gcp.ExtensionDomain;
 
 public static class Constants
 {

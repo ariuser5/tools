@@ -1,12 +1,12 @@
 using CommandLine;
-using DCiuve.Tools.Gcp.Mailflow.Cli.Services;
-using DCiuve.Tools.Gcp.Mailflow.Models;
-using DCiuve.Tools.Gcp.Mailflow.Services;
+using DCiuve.Gcp.Mailflow.Cli.Services;
+using DCiuve.Gcp.Mailflow.Models;
+using DCiuve.Gcp.Mailflow.Services;
 using DCiuve.Shared.Logging;
 using Google.Apis.Gmail.v1;
 using System.Text.RegularExpressions;
 
-namespace DCiuve.Tools.Gcp.Mailflow.Cli.Commands;
+namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 
 /// <summary>
 /// Command options for subscribing to emails.

@@ -2,7 +2,7 @@
 using Google.Apis.Util.Store;
 using System.Text;
 
-namespace DCiuve.Tools.Gcp.Auth;
+namespace DCiuve.Gcp.Auth;
 
 public class Authenticator
 {

@@ -1,6 +1,6 @@
 using DCiuve.Shared.Logging;
 
-namespace DCiuve.Tools.Gcp.PubSub.Cli;
+namespace DCiuve.Gcp.PubSub.Cli;
 
 /// <summary>
 /// Enhanced mediator that uses abstract factory pattern for authenticated service strategies.

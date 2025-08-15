@@ -1,12 +1,12 @@
 using CommandLine;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Services;
-using DCiuve.Tools.Gcp.Auth;
-using DCiuve.Tools.Gcp.Mailflow.Services;
-using DCiuve.Tools.Gcp.Mailflow.Cli.Commands;
+using DCiuve.Gcp.Mailflow.Services;
+using DCiuve.Gcp.Mailflow.Cli.Commands;
 using DCiuve.Shared.Logging;
+using DCiuve.Gcp.Auth;
 
-namespace DCiuve.Tools.Gcp.Mailflow.Cli;
+namespace DCiuve.Gcp.Mailflow.Cli;
 
 /// <summary>
 /// Main program class for the Gmail Mailflow tool.

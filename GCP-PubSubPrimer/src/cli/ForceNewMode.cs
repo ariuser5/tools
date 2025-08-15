@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Gcp.PubSub.Cli;
+namespace DCiuve.Gcp.PubSub.Cli;
 
 /// <summary>
 /// Defines the behavior for creating new watches when one may already exist.

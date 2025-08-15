@@ -1,10 +1,10 @@
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using Google.Apis.Services;
-using DCiuve.Tools.Gcp.ExtensionDomain;
+using DCiuve.Gcp.ExtensionDomain;
 using Google.Apis.Http;
 
-namespace DCiuve.Tools.Gcp.PubSub;
+namespace DCiuve.Gcp.PubSub;
 
 /// <summary>
 /// Unified broker service for managing watches across multiple Google services.

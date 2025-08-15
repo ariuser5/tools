@@ -1,8 +1,8 @@
-using DCiuve.Tools.Gcp.ExtensionDomain;
+using DCiuve.Gcp.ExtensionDomain;
 using DCiuve.Shared.Logging;
 using Google.Apis.Gmail.v1.Data;
 
-namespace DCiuve.Tools.Gcp.PubSub.Cli.Gmail;
+namespace DCiuve.Gcp.PubSub.Cli.Gmail;
 
 /// <summary>
 /// Gmail-specific implementation of the service strategy.

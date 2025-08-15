@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Gcp.PubSub;
+namespace DCiuve.Gcp.PubSub;
 
 /// <summary>
 /// Unified wrapper for all Google service watch responses.

@@ -1,9 +1,9 @@
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
-using DCiuve.Tools.Gcp.Mailflow.Models;
+using DCiuve.Gcp.Mailflow.Models;
 using System.Text;
 
-namespace DCiuve.Tools.Gcp.Mailflow.Services;
+namespace DCiuve.Gcp.Mailflow.Services;
 
 /// <summary>
 /// Service for fetching emails from Gmail.

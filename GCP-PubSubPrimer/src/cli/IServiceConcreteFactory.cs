@@ -1,6 +1,6 @@
 using Google.Apis.Http;
 
-namespace DCiuve.Tools.Gcp.PubSub.Cli;
+namespace DCiuve.Gcp.PubSub.Cli;
 
 /// <summary>
 /// Service-specific factory for creating strategies with authenticated inner services.

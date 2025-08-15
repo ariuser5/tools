@@ -5,7 +5,7 @@ Simple Google Cloud authentication library for .NET applications.
 ## Usage
 
 ```csharp
-using DCiuve.Tools.Gcp.Auth;
+using DCiuve.Gcp.Auth;
 
 // From file stream
 using var secretStream = new FileStream(credentialsPath, FileMode.Open);

@@ -1,10 +1,10 @@
-using DCiuve.Tools.Gcp.ExtensionDomain;
-using DCiuve.Tools.Gcp.Mailflow.Services;
-using DCiuve.Tools.Gcp.PubSub;
+using DCiuve.Gcp.ExtensionDomain;
+using DCiuve.Gcp.Mailflow.Services;
+using DCiuve.Gcp.PubSub;
 using DCiuve.Shared.Logging;
 using Google.Apis.Gmail.v1;
 
-namespace DCiuve.Tools.Gcp.Mailflow.Cli.Services;
+namespace DCiuve.Gcp.Mailflow.Cli.Services;
 
 /// <summary>
 /// Manages Gmail watch lifecycle including creation, renewal, and expiration handling.

@@ -1,4 +1,4 @@
-namespace DCiuve.Tools.Gcp.PubSub.Cli;
+namespace DCiuve.Gcp.PubSub.Cli;
 
 /// <summary>
 /// Abstract factory for creating authenticated service strategies.
