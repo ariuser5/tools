@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>Gcp.Gmail</AssemblyName>
+    <RootNamespace>DCiuve.Gcp.Mailflow</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageId>DCiuve.Gcp.Mailflow</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>DCiuve</Authors>
+    <Description>Gmail API client library for fetching emails and managing subscriptions</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Apis.Gmail.v1" Version="1.70.0.3833" />
+    <ProjectReference Include="..\..\..\GCP-PubSubPrimer\src\lib\Gcp.PubSub.csproj" />
+    <ProjectReference Include="..\..\..\GCP-ExtensionDomain\src\Gcp.ExtensionDomain.csproj" />
+  </ItemGroup>
+
+</Project>

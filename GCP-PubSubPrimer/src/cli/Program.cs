@@ -1,26 +1,24 @@
-﻿using Google.Apis.Auth.OAuth2;
-using DCiuve.Tools.Gcp.Auth;
-using DCiuve.Tools.Gcp.PubSub.Cli;
-using DCiuve.Tools.Gcp.PubSub;
-using DCiuve.Tools.Logging;
+using DCiuve.Gcp.PubSub.Cli;
+using DCiuve.Shared.Logging;
 using CommandLine;
-using System.Reflection;
-using Google.Apis.Gmail.v1;
 
-const string applicationName = "PubSubGmailPrimer";
+const string defaultApplicationName = "MyApp-PubSubPrimer";
 const string projectIdEnvVar = "GCP_PUBSUB_PROJECTID";
 const string topicIdEnvVar = "GCP_PUBSUB_TOPICID";
 const string secretPathEnvVar = "GCP_CREDENTIALS_PATH";
 
-// Parse command line arguments
-var result = Parser.Default.ParseArguments<Options>(args);
-return result.MapResult(RunApplication, HandleParseError);
+// Parse command line arguments with verb support
+var result = Parser.Default.ParseArguments<WatchOptions, CancelOptions>(args);
+return result.MapResult(
+    (WatchOptions opts) => RunWatchCommand(opts),
+    (CancelOptions opts) => RunCancelCommand(opts),
+    HandleParseError);
 
-static int RunApplication(Options options)
+static int RunWatchCommand(WatchOptions options)
 {
     try
     {
-        return RunApplicationAsync(options).GetAwaiter().GetResult();
+        return RunWatchApplicationAsync(options).GetAwaiter().GetResult();
     }
     catch (Exception ex)
     {
@@ -29,13 +27,30 @@ static int RunApplication(Options options)
     }
 }
 
-static async Task<int> RunApplicationAsync(Options options)
+static int RunCancelCommand(CancelOptions options)
+{
+    try
+    {
+        return RunCancelApplicationAsync(options).GetAwaiter().GetResult();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Fatal error: {ex.Message}");
+        return 1;
+    }
+}
+
+static async Task<int> RunWatchApplicationAsync(WatchOptions options)
 {
 	// Setup logger
 	var logger = new Logger
 	{
 		Verbosity = (LogLevel)options.Verbose
 	};
+
+	// Get the application name from options or use default
+	string applicationName = options.ApplicationName ?? defaultApplicationName;
+	logger.Debug("Using application name: {0}", applicationName);
 
 	// Get configuration values (command line args override environment variables)
 	string projectId = options.ProjectId
@@ -53,58 +68,133 @@ static async Task<int> RunApplicationAsync(Options options)
 	logger.Info("Starting {0} API Watch with Project: {1}, Topic: {2}", options.WatchService.ToUpper(), projectId, topicId);
 	logger.Debug("Using credentials from: {0}", secretPath);
 
-	// Get the watch action and its default scopes
-	var watchAction = GetWatchAction(options.WatchService);
-	var scopesInput = (options.Scopes ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries)
-		.Select(s => s.Trim())
-		.Where(s => !string.IsNullOrWhiteSpace(s))
-		.ToArray();
-	var scopes = watchAction.MapScopes(scopesInput);
-
-	logger.Debug("Using scopes: {0}", string.Join(", ", scopes));
-
-	// Load the service account credentials
+	// Create secret stream for authentication
 	using var secretStream = new FileStream(secretPath, FileMode.Open, FileAccess.Read);
 
-	logger.Debug("Authorizing with Google credentials...");
-	UserCredential authorization = await Authenticator.Authenticate(secretStream, scopes);
-	logger.Debug("Authorization successful.");
-
-	// Handle frequency options
-	if (options.Frequency.HasValue)
+	// Set up cancellation token for graceful shutdown
+	using var cts = new CancellationTokenSource();
+	Console.CancelKeyPress += (_, e) =>
 	{
-		logger.Info("Running with repeat frequency: {0} minutes", options.Frequency.Value);
+		e.Cancel = true; // Prevent immediate exit
+		logger.Info("Shutdown requested...");
+		cts.Cancel();
+	};
 
-		// Schedule the task to run at specified frequency
-		var timer = new Timer(
-			callback: async _ => await watchAction.Execute(authorization, applicationName, projectId, topicId, logger),
-			state: null,
-			dueTime: TimeSpan.Zero,
-			period: TimeSpan.FromMinutes(options.Frequency.Value));
-
-		// Keep the application running
-		logger.Info("Press [CTRL+C] to exit...");
-		Console.ReadLine();
-	}
-	else
+	try
 	{
-		logger.Info("Running once...");
-		await watchAction.Execute(authorization, applicationName, projectId, topicId, logger);
-	}
+		var abstractFactory = new ServiceStrategyAbstractFactory(logger);
+		var mediator = new ServiceMediator(abstractFactory, logger);
 
-	return 0;
+		// Parse custom scopes if provided
+		string[]? customScopes = null;
+		if (!string.IsNullOrWhiteSpace(options.Scopes))
+		{
+			customScopes = options.Scopes.Split(',', StringSplitOptions.RemoveEmptyEntries)
+				.Select(s => s.Trim())
+				.Where(s => !string.IsNullOrWhiteSpace(s))
+				.ToArray();
+		}
+
+		// Execute watch using the service mediator
+		await mediator.ExecuteWatchAsync(
+			options.WatchService,
+			secretStream,
+			applicationName,
+			projectId,
+			topicId,
+			customScopes,
+			options.Frequency,
+			options.ForceNew,
+			cts.Token);
+
+		return 0;
+	}
+	catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+	{
+		logger.Info("Operation cancelled by user.");
+		return 0;
+	}
+	catch (Exception ex)
+	{
+		logger.Error("Watch execution failed: {0}", ex.Message);
+		logger.Debug("Watch execution exception details: {0}", ex);
+		return 1;
+	}
 }
 
-static IWatchAction GetWatchAction(string serviceName)
+static async Task<int> RunCancelApplicationAsync(CancelOptions options)
 {
-	var watchActions = Assembly.GetExecutingAssembly()
-		.GetTypes()
-		.Where(t => typeof(IWatchAction).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
-		.Select(t => (IWatchAction?)Activator.CreateInstance(t)
-			?? throw new InvalidOperationException($"Could not create instance of watch action {t.FullName}"))
-		.ToList();
+	// Setup logger
+	var logger = new Logger
+	{
+		Verbosity = (LogLevel)options.Verbose
+	};
 
-	return watchActions.Single(a => a.Name.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
+	// Get the application name from options or use default
+	string applicationName = options.ApplicationName ?? defaultApplicationName;
+	logger.Debug("Using application name: {0}", applicationName);
+
+	// Get configuration values (command line args override environment variables)
+	string secretPath = options.SecretPath
+		?? Environment.GetEnvironmentVariable(secretPathEnvVar)
+		?? throw new InvalidOperationException($"Secret path not specified via --secret-path or {secretPathEnvVar} env var");
+
+	string? topicId = options.TopicId ?? Environment.GetEnvironmentVariable(topicIdEnvVar);
+
+	logger.Info("Cancelling {0} watch...", options.WatchService.ToUpper());
+	if (!string.IsNullOrEmpty(topicId))
+	{
+		logger.Debug("Target topic: {0}", topicId);
+	}
+	logger.Debug("Using credentials from: {0}", secretPath);
+
+	// Create secret stream for authentication
+	using var secretStream = new FileStream(secretPath, FileMode.Open, FileAccess.Read);
+
+	// Create cancellation token for Ctrl+C handling
+	using var cts = new CancellationTokenSource();
+	Console.CancelKeyPress += (_, e) =>
+	{
+		e.Cancel = true;
+		logger.Info("Cancellation requested by user. Stopping...");
+		cts.Cancel();
+	};
+
+	try
+	{
+		// Create abstract factory and service mediator
+		var abstractFactory = new ServiceStrategyAbstractFactory(logger);
+		var mediator = new ServiceMediator(abstractFactory, logger);
+
+		// Cancel watch using the service mediator
+		bool cancelled = await mediator.CancelWatchAsync(
+			options.WatchService,
+			secretStream,
+			applicationName,
+			cts.Token);
+		
+		if (cancelled)
+		{
+			logger.Info("Watch successfully cancelled.");
+			return 0;
+		}
+		else
+		{
+			logger.Warning("No active watch found to cancel or cancellation failed.");
+			return 1;
+		}
+	}
+	catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+	{
+		logger.Info("Operation cancelled by user.");
+		return 1;
+	}
+	catch (Exception ex)
+	{
+		logger.Error("Error during cancellation: {0}", ex.Message);
+		logger.Debug("Exception details: {0}", ex);
+		return 1;
+	}
 }
 
 static int HandleParseError(IEnumerable<CommandLine.Error> errors)
@@ -113,73 +203,3 @@ static int HandleParseError(IEnumerable<CommandLine.Error> errors)
     return 1;
 }
 
-public interface IWatchAction
-{
-	/// <summary>
-	/// Gets the name of the watch action.
-	/// </summary>
-	string Name { get; }
-
-	/// <summary>
-	/// Maps scope aliases to actual scopes. If no aliases are provided, returns default scopes.
-	/// </summary>
-	/// <param name="scopeAliases">Optional scope aliases to map.</param>
-	/// <returns>Array of scopes.</returns>
-	string[] MapScopes(IEnumerable<string>? scopeAliases);
-	
-	/// <summary>
-	/// Executes the watch action.
-	/// </summary>
-	/// <param name="authorization">Authorized user credential.</param>
-	/// <param name="applicationName">Application name for the API client.</param>
-	/// <param name="projectId">GCP Project ID.</param>
-	/// <param name="topicId">PubSub Topic ID.</param>
-	/// <param name="logger">Logger instance for output.</param>
-    Task Execute(
-		UserCredential authorization,
-		string applicationName,
-		string projectId,
-		string topicId,
-		Logger logger);
-}
-
-// Gmail watch action implementation
-public class GmailWatchAction : IWatchAction
-{
-    public static string[] DefaultScopes => [GmailService.Scope.GmailReadonly];
-
-	public string Name => "gmail";
-
-	public string[] MapScopes(IEnumerable<string>? scopeAliases)
-	{
-		if (scopeAliases == null || !scopeAliases.Any())
-			return DefaultScopes;
-		
-		throw new NotImplementedException(
-			"Not implemented for custom scope aliases. Only default scopes are supported.");
-	}
-
-	public async Task Execute(
-		UserCredential authorization,
-		string applicationName,
-		string projectId,
-		string topicId,
-		Logger logger)
-	{
-		try
-		{
-			logger.Debug("Creating Gmail watch service...");
-			using var gmailService = new GmailWatchService(authorization, applicationName);
-
-			logger.Debug("Creating watch request for inbox...");
-			var historyId = await gmailService.WatchInboxAsync(projectId, topicId);
-
-			logger.Info("Watch request successful: {0}", historyId);
-		}
-		catch (Exception ex)
-		{
-			logger.Error("An error occurred during watch setup: {0}", ex.Message);
-			logger.Debug("Exception details: {0}", ex);
-		}
-	}
-}

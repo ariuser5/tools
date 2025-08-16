@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.Mailflow", "lib\Gcp.Mailflow.csproj", "{3098ECFC-1DE6-40E8-8F36-01ECC5204721}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mailflow", "cli\mailflow.csproj", "{566C85D7-585E-47AB-8E7F-FE2687B5FD62}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.PubSub", "..\..\GCP-PubSubPrimer\src\lib\Gcp.PubSub.csproj", "{F12F4B1B-2253-4395-98B4-7F826BA9DC0F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gcp.ExtensionDomain", "..\..\GCP-ExtensionDomain\src\Gcp.ExtensionDomain.csproj", "{25C6FFEF-E3AB-4C73-B331-6842A7DE7032}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3098ECFC-1DE6-40E8-8F36-01ECC5204721}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3098ECFC-1DE6-40E8-8F36-01ECC5204721}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3098ECFC-1DE6-40E8-8F36-01ECC5204721}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3098ECFC-1DE6-40E8-8F36-01ECC5204721}.Release|Any CPU.Build.0 = Release|Any CPU
+		{566C85D7-585E-47AB-8E7F-FE2687B5FD62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{566C85D7-585E-47AB-8E7F-FE2687B5FD62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{566C85D7-585E-47AB-8E7F-FE2687B5FD62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{566C85D7-585E-47AB-8E7F-FE2687B5FD62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F12F4B1B-2253-4395-98B4-7F826BA9DC0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F12F4B1B-2253-4395-98B4-7F826BA9DC0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F12F4B1B-2253-4395-98B4-7F826BA9DC0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F12F4B1B-2253-4395-98B4-7F826BA9DC0F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{25C6FFEF-E3AB-4C73-B331-6842A7DE7032}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25C6FFEF-E3AB-4C73-B331-6842A7DE7032}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25C6FFEF-E3AB-4C73-B331-6842A7DE7032}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25C6FFEF-E3AB-4C73-B331-6842A7DE7032}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

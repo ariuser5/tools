@@ -1,0 +1,71 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+            "name": "Debug PubSubPrimer Watch Gmail",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/pub-sub-prime.exe",
+            "args": [
+                "watch", "gmail",
+                "--verbose", "3"
+            ],
+            "cwd": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+            "env": {
+                "GCP_PUBSUB_PROJECTID": "smart-home-409915",
+                "GCP_PUBSUB_TOPICID": "gmailToTask",
+                "GCP_CREDENTIALS_PATH": "C:\\Users\\dariu\\_secrets\\GCP\\client_secret_566540516747-q0a8n9uteh0q8f4a7qd7vvi6f06tuqii.apps.googleusercontent.com.json"
+            }
+        },
+        {
+            "name": "Debug PubSubPrimer Cancel Gmail",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/pub-sub-prime.exe",
+            "args": [
+                "cancel", "gmail",
+                "--verbose", "3"
+            ],
+            "cwd": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+            "env": {
+                "GCP_CREDENTIALS_PATH": "C:\\Users\\dariu\\_secrets\\GCP\\client_secret_566540516747-q0a8n9uteh0q8f4a7qd7vvi6f06tuqii.apps.googleusercontent.com.json"
+            }
+        },
+        {
+            "name": "Debug PubSubPrimer - Repeated",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/pub-sub-prime.exe",
+            "args": [
+                "watch", "gmail",
+                "--verbose", "3",
+                "-f", "1",
+                "--force-new", "First"
+            ],
+            "cwd": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+            "env": {}
+        },
+        {
+            "name": "Debug Mailflow - Fetch",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0/mailflow.exe",
+            "args": [
+                "fetch",
+                "--verbose", "3"
+            ],
+            "cwd": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+        }
+	]
+}
