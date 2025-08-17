@@ -8,7 +8,7 @@
             "name": "Debug PubSubPrimer Watch Gmail",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/pub-sub-prime.exe",
+            "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/psub.exe",
             "args": [
                 "watch", "gmail",
                 "--verbosity", "4"
@@ -26,7 +26,7 @@
             "name": "Debug PubSubPrimer Cancel Gmail",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/pub-sub-prime.exe",
+            "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/psub.exe",
             "args": [
                 "cancel", "gmail",
                 "--verbosity", "4"
@@ -42,7 +42,7 @@
             "name": "Debug PubSubPrimer - Repeated",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/pub-sub-prime.exe",
+            "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/psub.exe",
             "args": [
                 "watch", "gmail",
                 "--verbosity", "4",

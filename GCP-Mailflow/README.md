@@ -24,7 +24,7 @@ Command-line tool for Gmail management with email fetching and real-time monitor
 .\mailflow.exe fetch
 
 # With filters
-.\mailflow.exe fetch --unread --from "boss@company.com" --limit 5
+.\mailflow.exe fetch --unread --from "boss@company.com" --max 5
 
 # Output formats
 .\mailflow.exe fetch --output json
@@ -53,7 +53,7 @@ Command-line tool for Gmail management with email fetching and real-time monitor
 - `--unread` - Only unread emails
 - `--from "email"` - Filter by sender
 - `--subject "text"` - Filter by subject
-- `--limit N` - Maximum emails (default: 10)
+- `--max N` - Maximum emails (default: 10)
 - `--output json|csv` - Output format
 
 ### Subscribe Options
