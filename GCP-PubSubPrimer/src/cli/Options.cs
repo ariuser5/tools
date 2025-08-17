@@ -1,8 +1,9 @@
 using CommandLine;
+using DCiuve.Shared.Logging;
 
 namespace DCiuve.Gcp.PubSub.Cli;
 
-public abstract class BaseOptions
+public abstract class BaseOptions : ILogVerbosityOptions
 {
 	[Option('p', "project-id", Required = false, HelpText = "GCP Project ID (fallback: GCP_PUBSUB_PROJECTID env var)")]
 	public string? ProjectId { get; set; }
@@ -13,8 +14,7 @@ public abstract class BaseOptions
 	[Option('a', "application-name", Required = false, HelpText = "Application name for Google API requests (fallback: default application name)")]
 	public string? ApplicationName { get; set; }
 
-	[Option('v', "verbose", Required = false, HelpText = "Enable verbose output", Default = 2)]
-	public int Verbose { get; set; }
+	LogLevel ILogVerbosityOptions.Verbosity { get; set; } = LogLevel.Info;
 }
 
 [Verb("watch", HelpText = "Create and manage watch requests for GCP services")]

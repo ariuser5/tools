@@ -12,5 +12,9 @@
     <Authors>DCiuve</Authors>
     <Description>A simple, colored console logger for .NET applications</Description>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
+  </ItemGroup>
 
 </Project>

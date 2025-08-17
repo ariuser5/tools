@@ -6,22 +6,27 @@ namespace DCiuve.Shared.Logging;
 public enum LogLevel
 {
     /// <summary>
+    /// No logging output.
+    /// </summary>
+    Quiet = 0,
+    
+    /// <summary>
     /// Error messages only.
     /// </summary>
-    Error = 0,
+    Error = 1,
 
     /// <summary>
     /// Warning messages and above.
     /// </summary>
-    Warning = 1,
+    Warning = 2,
 
     /// <summary>
     /// Informational messages and above.
     /// </summary>
-    Info = 2,
+    Info = 3,
 
     /// <summary>
     /// Debug messages and above (most verbose).
     /// </summary>
-    Debug = 3
+    Debug = 4
 }

@@ -12,7 +12,7 @@ namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 /// Command options for subscribing to emails.
 /// </summary>
 [Verb("subscribe", HelpText = "Subscribe to email notifications and monitor for new emails. The --query and individual filter flags can be combined for comprehensive filtering.")]
-public class SubscribeOptions : GmailFilterOptions
+public class SubscribeOptions : GmailFilterOptions, ILogVerbosityOptions
 {
     [Option('n', "name", Required = false, HelpText = "Name/ID for this subscription. If not provided, a unique ID will be auto-generated.")]
     public string? Name { get; set; }
@@ -32,14 +32,13 @@ public class SubscribeOptions : GmailFilterOptions
     [Option("duration", Required = false, HelpText = "Duration to run subscription (e.g., '1h', '30m', '2d'). Leave empty for indefinite.")]
     public string? Duration { get; set; }
 
-    [Option('v', "verbose", Required = false, Default = false, HelpText = "Show detailed output.")]
-    public bool Verbose { get; set; } = false;
-
     [Option("push", Required = false, Default = false, HelpText = "Use push notifications instead of polling.")]
     public bool UsePushNotifications { get; set; } = false;
 
     [Option("setup-watch", Required = false, Default = false, HelpText = "Setup Gmail watch request automatically (alternative to using PubSubPrimer).")]
     public bool SetupWatch { get; set; } = false;
+    
+    public LogLevel Verbosity { get; set; } = LogLevel.Info;
 }
 
 
@@ -354,7 +353,7 @@ public class SubscribeCommand(
             Console.WriteLine($"From: {email.From}");
             Console.WriteLine($"Date: {email.Date:yyyy-MM-dd HH:mm:ss}");
 
-            if (options.Verbose)
+            if (options.Verbosity > LogLevel.Info)
             {
                 Console.WriteLine($"ID: {email.Id}");
                 Console.WriteLine($"Labels: {string.Join(", ", email.Labels)}");

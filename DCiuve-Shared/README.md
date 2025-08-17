@@ -1,47 +1,59 @@
-# DCiuve.Shared.Logging
+# DCiuve.Shared
 
-A simple, colored console logger for .NET applications with configurable verbosity levels.
+Shared utilities: logging, execution pipelines, and CLI application framework.
 
-## Features
+## Components
 
-- **Colored Output**: Different colors for different log levels (Error=Red, Warning=Yellow, Info=White, Debug=Gray)
-- **Configurable Verbosity**: Set minimum log level to control output detail
-- **String Formatting**: Supports `string.Format` style message templates
-- **Interface-based**: Implements `ILogger` for dependency injection and testing
+### 🔍 Logging (`DCiuve.Shared.Logging`)
 
-## Usage
+Colored console logger with configurable verbosity levels.
 
 ```csharp
 using DCiuve.Shared.Logging;
 
-var logger = new Logger
-{
-    Verbosity = LogLevel.Debug  // Show all messages
-};
-
-logger.Error("Something went wrong: {0}", ex.Message);
-logger.Warning("This is a warning about {0}", someValue);
-logger.Info("Operation completed successfully");
-logger.Debug("Debug info: variable = {0}", debugValue);
+var logger = new Logger { Verbosity = LogLevel.Debug };
+logger.Info("Operation completed: {0}", result);
 ```
 
-## Log Levels
+**Log Levels**: `Quiet` (0) → `Error` (1) → `Warning` (2) → `Info` (3) → `Debug` (4)
 
-- `Error` (0): Only error messages
-- `Warning` (1): Warning messages and above
-- `Info` (2): Info messages and above (default)
-- `Debug` (3): All messages (most verbose)
+### ⚡ ExecutionFlow Pipeline (`DCiuve.Shared.Pipeline`)
+
+Fluent API for data processing pipelines (similar to RxJS operators).
+
+```csharp
+using DCiuve.Shared.Pipeline;
+
+var result = ExecutionFlow
+    .From("hello world")
+    .Map(s => s.ToUpper())
+    .Filter(s => s.Length > 5)
+    .Catch(ex => "ERROR")
+    .Execute();
+```
+
+**Key Operators**: `Map`, `Filter`, `Tap`, `Catch`, `Retry`, `Switch`, `FlatMap`
+
+### 🚀 CLI Application (`DCiuve.Shared.Cli`)
+
+Dependency injection-like system for CLI applications.
+
+```csharp
+using DCiuve.Shared.Cli;
+
+// Automatic parameter resolution by type
+// ILogger auto-injected from ILogVerbosityOptions or default
+return Application.Run(MyMethod, options);
+```
 
 ## Integration
 
-Add as a project reference:
-
 ```xml
-<ProjectReference Include="..\..\Shared\Logging\src\DCiuve.Tools.Logging.csproj" />
+<ProjectReference Include="path\to\DCiuve.Shared.csproj" />
 ```
 
-Then use the namespace:
-
 ```csharp
-using DCiuve.Tools.Logging;
+using DCiuve.Shared.Logging;
+using DCiuve.Shared.Pipeline;
+using DCiuve.Shared.Cli;
 ```

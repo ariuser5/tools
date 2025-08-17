@@ -1,53 +1,21 @@
 using DCiuve.Gcp.PubSub.Cli;
 using DCiuve.Shared.Logging;
 using CommandLine;
+using DCiuve.Shared.Cli;
 
 const string defaultApplicationName = "MyApp-PubSubPrimer";
 const string projectIdEnvVar = "GCP_PUBSUB_PROJECTID";
 const string topicIdEnvVar = "GCP_PUBSUB_TOPICID";
 const string secretPathEnvVar = "GCP_CREDENTIALS_PATH";
 
-// Parse command line arguments with verb support
 var result = Parser.Default.ParseArguments<WatchOptions, CancelOptions>(args);
 return result.MapResult(
-    (WatchOptions opts) => RunWatchCommand(opts),
-    (CancelOptions opts) => RunCancelCommand(opts),
-    HandleParseError);
+	(WatchOptions o) => Application.Run(InitiateWatchAsync, o),
+	(CancelOptions o) => Application.Run(CancelWatchAsync, o),
+	notParsedFunc: HandleParseError);
 
-static int RunWatchCommand(WatchOptions options)
+static async Task<int> InitiateWatchAsync(ILogger logger, WatchOptions options)
 {
-    try
-    {
-        return RunWatchApplicationAsync(options).GetAwaiter().GetResult();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Fatal error: {ex.Message}");
-        return 1;
-    }
-}
-
-static int RunCancelCommand(CancelOptions options)
-{
-    try
-    {
-        return RunCancelApplicationAsync(options).GetAwaiter().GetResult();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Fatal error: {ex.Message}");
-        return 1;
-    }
-}
-
-static async Task<int> RunWatchApplicationAsync(WatchOptions options)
-{
-	// Setup logger
-	var logger = new Logger
-	{
-		Verbosity = (LogLevel)options.Verbose
-	};
-
 	// Get the application name from options or use default
 	string applicationName = options.ApplicationName ?? defaultApplicationName;
 	logger.Debug("Using application name: {0}", applicationName);
@@ -122,14 +90,8 @@ static async Task<int> RunWatchApplicationAsync(WatchOptions options)
 	}
 }
 
-static async Task<int> RunCancelApplicationAsync(CancelOptions options)
+static async Task<int> CancelWatchAsync(ILogger logger, CancelOptions options)
 {
-	// Setup logger
-	var logger = new Logger
-	{
-		Verbosity = (LogLevel)options.Verbose
-	};
-
 	// Get the application name from options or use default
 	string applicationName = options.ApplicationName ?? defaultApplicationName;
 	logger.Debug("Using application name: {0}", applicationName);

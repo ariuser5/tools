@@ -15,7 +15,7 @@ A collection of command-line tools for Google Cloud Platform integration and oth
 - **[GithubApiClient](./GithubApiClient/)** - GitHub API client
 
 ### Shared
-- **[DCiuve-Shared](./DCiuve-Shared/)** - Console logger with colors
+- **[DCiuve-Shared](./DCiuve-Shared/)** - Shared utilities: logging and execution pipelines
 
 ## Quick Start
 
@@ -37,9 +37,3 @@ A collection of command-line tools for Google Cloud Platform integration and oth
    # Monitor emails
    .\mailflow.exe subscribe --name "monitor" --push --topic "projects/your-project/topics/gmail-notifications"
    ```
-
----
-
-TODO: 
-1. Rename gmailcli to mailflow. ✅ DONE
-2. See if you can split the two subscribe methods: polling and push;

@@ -10,7 +10,7 @@ namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 /// Command for fetching emails from Gmail.
 /// </summary>
 [Verb("fetch", HelpText = "Fetch emails from Gmail based on specified criteria. The --query and individual filter flags can be combined for comprehensive filtering.")]
-public class FetchOptions : GmailFilterOptions
+public class FetchOptions : GmailFilterOptions, ILogVerbosityOptions
 {
 	[Option('m', "max", Required = false, Default = 10, HelpText = "Maximum number of emails to fetch.")]
 	public int MaxResults { get; set; } = 10;
@@ -21,8 +21,7 @@ public class FetchOptions : GmailFilterOptions
 	[Option("page-token", Required = false, HelpText = "Page token for pagination.")]
 	public string? PageToken { get; set; }
 
-	[Option('v', "verbose", Required = false, Default = false, HelpText = "Show detailed email content.")]
-	public bool Verbose { get; set; } = false;
+	public LogLevel Verbosity { get; set; } = LogLevel.Info;
 }
 
 
@@ -85,7 +84,7 @@ public class FetchCommand(EmailFetcher emailFetcher, ILogger logger)
                 return OutputAsCsvAsync(emails);
             case "console":
             default:
-                OutputToConsole(emails, options.Verbose);
+                OutputToConsole(emails, options.Verbosity > LogLevel.Info);
                 break;
         }
         return Task.CompletedTask;

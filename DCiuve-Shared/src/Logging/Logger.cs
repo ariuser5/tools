@@ -65,6 +65,11 @@ public class Logger : ILogger
             WriteColoredLine($"[DEBUG] {formattedMessage}", ConsoleColor.Gray);
         }
     }
+    
+    public void ConfigureWithOptions(ILogVerbosityOptions options)
+    {
+        Verbosity = options.Verbosity;
+    }
 
     /// <summary>
     /// Writes a colored line to the console, preserving the original color.

@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/pub-sub-prime.exe",
             "args": [
                 "watch", "gmail",
-                "--verbose", "3"
+                "--verbosity", "4"
             ],
             "cwd": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0",
             "console": "integratedTerminal",
@@ -29,7 +29,7 @@
             "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/pub-sub-prime.exe",
             "args": [
                 "cancel", "gmail",
-                "--verbose", "3"
+                "--verbosity", "4"
             ],
             "cwd": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0",
             "console": "integratedTerminal",
@@ -45,7 +45,7 @@
             "program": "${workspaceFolder}/GCP-PubSubPrimer/src/cli/bin/Debug/net9.0/pub-sub-prime.exe",
             "args": [
                 "watch", "gmail",
-                "--verbose", "3",
+                "--verbosity", "4",
                 "-f", "1",
                 "--force-new", "First"
             ],
@@ -61,7 +61,7 @@
             "program": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0/mailflow.exe",
             "args": [
                 "fetch",
-                "--verbose", "3"
+                "--verbosity", "4"
             ],
             "cwd": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0",
             "console": "integratedTerminal",
