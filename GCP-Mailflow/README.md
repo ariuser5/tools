@@ -36,7 +36,7 @@ Command-line tool for Gmail management with email fetching and real-time monitor
 **Push Notifications (Recommended):**
 ```powershell
 # First, setup Gmail watch (one-time)
-.\pub-sub-prime.exe watch gmail --project-id "your-project" --topic-id "gmail-notifications"
+.\psub.exe watch gmail --project-id "your-project" --topic-id "gmail-notifications"
 
 # Then monitor
 .\mailflow.exe subscribe --name "monitor" --push --topic "projects/your-project/topics/gmail-notifications"

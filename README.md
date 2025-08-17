@@ -32,7 +32,7 @@ A collection of command-line tools for Google Cloud Platform integration and oth
 3. Example: Monitor Gmail
    ```powershell
    # Setup (one-time)
-   .\pub-sub-prime.exe watch gmail --project-id "your-project" --topic-id "gmail-notifications"
+   .\psub.exe watch gmail --project-id "your-project" --topic-id "gmail-notifications"
    
    # Monitor emails
    .\mailflow.exe subscribe --name "monitor" --push --topic "projects/your-project/topics/gmail-notifications"

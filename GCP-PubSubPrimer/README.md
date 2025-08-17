@@ -1,4 +1,4 @@
-# GCP-PubSubPrimer (`pub-sub-prime`)
+# GCP-PubSubPrimer (`psub`)
 
 Sets up Gmail watch requests for push notifications.
 
@@ -10,12 +10,12 @@ Creates Gmail watches that send notifications to Pub/Sub topics. This is require
 
 ### Setup Gmail Watch
 ```powershell
-.\pub-sub-prime.exe watch gmail --project-id "your-project" --topic-id "gmail-notifications"
+.\psub.exe watch gmail --project-id "your-project" --topic-id "gmail-notifications"
 ```
 
 ### Cancel Gmail Watch
 ```powershell
-.\pub-sub-prime.exe cancel gmail
+.\psub.exe cancel gmail
 ```
 
 ### Environment Variables
@@ -40,7 +40,7 @@ $env:GCP_PUBSUB_TOPICID = "gmail-notifications"
 
 1. **One-time setup** with PubSubPrimer:
    ```powershell
-   .\pub-sub-prime.exe watch gmail --project-id "my-project" --topic-id "gmail-notifications"
+   .\psub.exe watch gmail --project-id "my-project" --topic-id "gmail-notifications"
    ```
 
 2. **Use in other tools**:
