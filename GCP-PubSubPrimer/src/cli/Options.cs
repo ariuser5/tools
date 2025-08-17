@@ -3,7 +3,7 @@ using DCiuve.Shared.Logging;
 
 namespace DCiuve.Gcp.PubSub.Cli;
 
-public abstract class BaseOptions : ILogVerbosityOptions
+public abstract record BaseOptions : ILogVerbosityOptions
 {
 	[Option('p', "project-id", Required = false, HelpText = "GCP Project ID (fallback: GCP_PUBSUB_PROJECTID env var)")]
 	public string? ProjectId { get; set; }
@@ -18,7 +18,7 @@ public abstract class BaseOptions : ILogVerbosityOptions
 }
 
 [Verb("watch", HelpText = "Create and manage watch requests for GCP services")]
-public class WatchOptions : BaseOptions
+public record WatchOptions : BaseOptions
 {
 	[Value(0, MetaName = "watch-service", Required = true, HelpText = "GCP service to create watch for (gmail, drive, calendar, sheets)")]
 	public string WatchService { get; set; } = string.Empty;
@@ -37,7 +37,7 @@ public class WatchOptions : BaseOptions
 }
 
 [Verb("cancel", HelpText = "Cancel active watch requests for GCP services")]
-public class CancelOptions : BaseOptions
+public record CancelOptions : BaseOptions
 {
 	[Value(0, MetaName = "watch-service", Required = true, HelpText = "GCP service to cancel watch for (gmail, drive, calendar, sheets)")]
 	public string WatchService { get; set; } = string.Empty;

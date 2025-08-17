@@ -10,7 +10,7 @@ namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 /// Command for fetching emails from Gmail.
 /// </summary>
 [Verb("fetch", HelpText = "Fetch emails from Gmail based on specified criteria. The --query and individual filter flags can be combined for comprehensive filtering.")]
-public class FetchOptions : GmailFilterOptions, ILogVerbosityOptions
+public record FetchOptions : GmailFilterOptions, ILogVerbosityOptions
 {
 	[Option('m', "max", Required = false, Default = 10, HelpText = "Maximum number of emails to fetch.")]
 	public int MaxResults { get; set; } = 10;

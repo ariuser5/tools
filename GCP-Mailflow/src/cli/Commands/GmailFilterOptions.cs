@@ -2,7 +2,7 @@ using CommandLine;
 
 namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 
-public abstract class GmailFilterOptions
+public abstract record GmailFilterOptions
 {
 	[Option('q', "query", Required = false, HelpText = "Gmail query string to filter emails. Can be combined with individual filter flags for comprehensive filtering.")]
 	public string Query { get; set; } = string.Empty;

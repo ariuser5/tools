@@ -12,7 +12,7 @@ namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 /// Command options for subscribing to emails.
 /// </summary>
 [Verb("subscribe", HelpText = "Subscribe to email notifications and monitor for new emails. The --query and individual filter flags can be combined for comprehensive filtering.")]
-public class SubscribeOptions : GmailFilterOptions, ILogVerbosityOptions
+public record SubscribeOptions : GmailFilterOptions, ILogVerbosityOptions
 {
     [Option('n', "name", Required = false, HelpText = "Name/ID for this subscription. If not provided, a unique ID will be auto-generated.")]
     public string? Name { get; set; }
