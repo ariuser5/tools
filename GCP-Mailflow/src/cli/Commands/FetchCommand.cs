@@ -10,18 +10,16 @@ namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 /// Command for fetching emails from Gmail.
 /// </summary>
 [Verb("fetch", HelpText = "Fetch emails from Gmail based on specified criteria. The --query and individual filter flags can be combined for comprehensive filtering.")]
-public record FetchOptions : GmailFilterOptions, ILogVerbosityOptions
+public record FetchOptions : BaseOptions
 {
 	[Option('m', "max", Required = false, Default = 10, HelpText = "Maximum number of emails to fetch.")]
 	public int MaxResults { get; set; } = 10;
 
-	[Option('o', "output", Required = false, HelpText = "Output format: console, json, csv.")]
+	[Option("output-format", Required = false, HelpText = "Output format: console, json, csv.")]
 	public string OutputFormat { get; set; } = "console";
 
 	[Option("page-token", Required = false, HelpText = "Page token for pagination.")]
 	public string? PageToken { get; set; }
-
-	public LogLevel Verbosity { get; set; } = LogLevel.Info;
 }
 
 
@@ -64,6 +62,7 @@ public class FetchCommand(EmailFetcher emailFetcher, ILogger logger)
         }
         catch (Exception ex)
         {
+            // Errors are always shown, even through QuietLogger
             logger.Error($"Error executing fetch command: {ex.Message}");
             return 1;
         }
@@ -74,20 +73,57 @@ public class FetchCommand(EmailFetcher emailFetcher, ILogger logger)
     /// </summary>
     /// <param name="emails">The emails to output.</param>
     /// <param name="options">The fetch command options.</param>
-    private static Task OutputEmailsAsync(List<EmailMessage> emails, FetchOptions options)
+    private static async Task OutputEmailsAsync(List<EmailMessage> emails, FetchOptions options)
+    {
+        // Determine if we're writing to file or stdout
+        var writeToFile = !string.IsNullOrEmpty(options.Output) && options.Output != "-";
+        
+        if (writeToFile)
+        {
+            // Write to file
+            await using var fileStream = new FileStream(options.Output, FileMode.Create, FileAccess.Write);
+            await using var writer = new StreamWriter(fileStream);
+            
+            // Temporarily redirect Console.Out to the file
+            var originalOut = Console.Out;
+            Console.SetOut(writer);
+            
+            try
+            {
+                await OutputEmailsToStreamAsync(emails, options);
+            }
+            finally
+            {
+                Console.SetOut(originalOut);
+            }
+        }
+        else
+        {
+            // Write to stdout (default)
+            await OutputEmailsToStreamAsync(emails, options);
+        }
+    }
+
+    /// <summary>
+    /// Outputs emails to the current output stream based on format.
+    /// </summary>
+    /// <param name="emails">The emails to output.</param>
+    /// <param name="options">The fetch command options.</param>
+    private static async Task OutputEmailsToStreamAsync(List<EmailMessage> emails, FetchOptions options)
     {
         switch (options.OutputFormat.ToLowerInvariant())
         {
             case "json":
-                return OutputAsJsonAsync(emails);
+                await OutputAsJsonAsync(emails);
+                break;
             case "csv":
-                return OutputAsCsvAsync(emails);
+                await OutputAsCsvAsync(emails);
+                break;
             case "console":
             default:
                 OutputToConsole(emails, options.Verbosity > LogLevel.Info);
                 break;
         }
-        return Task.CompletedTask;
     }
 
     /// <summary>

@@ -7,10 +7,12 @@ using DCiuve.Gcp.Auth;
 using DCiuve.Shared.Cli;
 using DCiuve.Shared.Logging;
 
+var app = Application.CreateBasic();
+
 var result = Parser.Default.ParseArguments<FetchOptions, SubscribeOptions>(args);
 return result.MapResult(
-    (FetchOptions o) => Application.Run(HandleFetchCommandAsync, o),
-    (SubscribeOptions o) => Application.Run(HandleSubscribeCommandAsync, o),
+    (FetchOptions o) => app.Run(HandleFetchCommandAsync, o),
+    (SubscribeOptions o) => app.Run(HandleSubscribeCommandAsync, o),
     notParsedFunc: HandleParseError);
 
 static int HandleParseError(IEnumerable<Error> errors)

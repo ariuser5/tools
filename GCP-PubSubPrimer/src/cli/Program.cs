@@ -10,8 +10,8 @@ const string secretPathEnvVar = "GCP_CREDENTIALS_PATH";
 
 var result = Parser.Default.ParseArguments<WatchOptions, CancelOptions>(args);
 return result.MapResult(
-	(WatchOptions o) => Application.Run(InitiateWatchAsync, o),
-	(CancelOptions o) => Application.Run(CancelWatchAsync, o),
+	(WatchOptions o) => Application.RunNew(InitiateWatchAsync, o),
+	(CancelOptions o) => Application.RunNew(CancelWatchAsync, o),
 	notParsedFunc: HandleParseError);
 
 static async Task<int> InitiateWatchAsync(ILogger logger, WatchOptions options)
