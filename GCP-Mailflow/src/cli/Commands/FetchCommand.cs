@@ -15,7 +15,7 @@ public record FetchOptions : BaseOptions
 	[Option('m', "max", Required = false, Default = 10, HelpText = "Maximum number of emails to fetch.")]
 	public int MaxResults { get; set; } = 10;
 
-	[Option("output-format", Required = false, HelpText = "Output format: console, json, csv.")]
+	[Option('f', "output-format", Required = false, HelpText = "Output format: console, json, csv.")]
 	public string OutputFormat { get; set; } = "console";
 
 	[Option("page-token", Required = false, HelpText = "Page token for pagination.")]
