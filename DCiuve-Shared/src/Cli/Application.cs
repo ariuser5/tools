@@ -236,15 +236,8 @@ public class Application : IDependencyProvider
 		{
 			var parameter = parameters[paramIndex];
 			var parameterType = parameter.ParameterType;
-
-			// First try to resolve from the dependency container
-			if (dependencyContainer.TryGetValue(parameterType, out var service))
-			{
-				resolvedArgs[paramIndex] = service;
-				continue;
-			}
-
-			// Then try to find matching argument by type from additional args
+			
+			// First try to find matching argument by type from additional args (highest priority)
 			object? matchedArg = null;
 			for (int argIndex = 0; argIndex < additionalArgs.Length; argIndex++)
 			{
@@ -269,8 +262,18 @@ public class Application : IDependencyProvider
 			if (matchedArg != null)
 			{
 				resolvedArgs[paramIndex] = matchedArg;
+				continue;
 			}
-			else if (parameter.HasDefaultValue)
+			
+			// Then try to resolve from the dependency container
+			if (dependencyContainer.TryGetValue(parameterType, out var service))
+			{
+				resolvedArgs[paramIndex] = service;
+				continue;
+			}
+			
+			// Finally, use default values or throw if not possible
+			if (parameter.HasDefaultValue)
 			{
 				resolvedArgs[paramIndex] = parameter.DefaultValue;
 			}
