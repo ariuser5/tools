@@ -10,6 +10,11 @@ using DCiuve.Shared.Logging;
 var app = Application.CreateBasic();
 
 var result = Parser.Default.ParseArguments<FetchOptions, SubscribeOptions>(args);
+var options = (BaseOptions)result.Value;
+
+app.RegisterDependency<ILogVerbosityOptions>(options);
+app.RegisterDependency<ILogSilentOptions>(options);
+
 return result.MapResult(
     (FetchOptions o) => app.Run(HandleFetchCommandAsync, o),
     (SubscribeOptions o) => app.Run(HandleSubscribeCommandAsync, o),

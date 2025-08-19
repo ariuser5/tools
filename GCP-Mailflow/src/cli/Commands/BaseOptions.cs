@@ -3,13 +3,8 @@ using DCiuve.Shared.Logging;
 
 namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 
-public abstract record BaseOptions : GmailFilterOptions, ILogVerbosityOptions
+public abstract record BaseOptions : GmailFilterOptions, ILogVerbosityOptions, ILogSilentOptions
 {
-	[Option('s', "silent",
-		Required = false,
-		Default = false,
-		HelpText = "Run in silent mode - suppress status and progress messages.")]
-    public bool Silent { get; set; } = false;
 
 	[Option('o', "output",
 		Required = false,
@@ -18,4 +13,5 @@ public abstract record BaseOptions : GmailFilterOptions, ILogVerbosityOptions
 	public string Output { get; set; } = "-";
 	
 	public LogLevel Verbosity { get; set; } = LogLevel.Info;
+    public bool Silent { get; set; } = false;
 }

@@ -61,7 +61,9 @@
             "program": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0/mailflow.exe",
             "args": [
                 "fetch",
-                "--verbosity", "4"
+                "-m", "1",
+                "--labels", "IMPORTANT",
+                "-v", "4"
             ],
             "cwd": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0",
             "console": "integratedTerminal",

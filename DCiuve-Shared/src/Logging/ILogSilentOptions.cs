@@ -4,6 +4,9 @@ namespace DCiuve.Shared.Logging;
 
 public interface ILogSilentOptions
 {
-	[Option("silent", Required = false, HelpText = "Enable silent mode (no output).")]
+	[Option('s', "silent",
+		Required = false,
+		Default = false,
+		HelpText = "Run in silent mode - suppress status and progress messages.")]
 	bool Silent { get; set; }
 }

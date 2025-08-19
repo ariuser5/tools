@@ -166,30 +166,10 @@ public class Application : IDependencyProvider
 	{
 		try
 		{
-			// Create a fresh dependency container for this execution
-			var dependencyContainer = new Dictionary<Type, object>();
-
-			// First, copy all direct instances
-			foreach (var (key, value) in _instances)
-			{
-				dependencyContainer[key] = value;
-			}
-
-			// Then resolve all factories with a proper dependency provider
-			var dependencyProvider = new ExecutionDependencyProvider(dependencyContainer, _factories);
-			ResolveAllFactories(dependencyProvider, dependencyContainer);
-
-			var resolvedArgs = ResolveMethodParameters(method, additionalArgs, dependencyContainer);
+			var resolvedArgs = ResolveDependencies(method, additionalArgs);
 			var result = method.DynamicInvoke(resolvedArgs);
-
-			return result switch
-			{
-				int intValue => intValue,
-				Task<int> task => task.GetAwaiter().GetResult(),
-				Task => 0, // Task without return value = success
-				null => 0, // void method = success
-				_ => throw new InvalidOperationException($"Method must return int, Task<int>, Task, or void. Got: {result.GetType()}")
-			};
+			
+			return ProcessResult(result);
 		}
 		catch (Exception ex)
 		{
@@ -199,9 +179,102 @@ public class Application : IDependencyProvider
 	}
 
 	/// <summary>
+	/// Runs an async method with automatic dependency injection-like parameter resolution.
+	/// Parameters are resolved from registered dependencies.
+	/// Creates a fresh dependency container for each execution to ensure thread safety.
+	/// </summary>
+	/// <param name="method">The async method to invoke</param>
+	/// <param name="additionalArgs">Additional arguments to resolve against method parameters</param>
+	/// <returns>Task that returns exit code (0 for success, 1 for error)</returns>
+	public async Task<int> RunAsync(Delegate method, params object[] additionalArgs)
+	{
+		try
+		{
+			var resolvedArgs = ResolveDependencies(method, additionalArgs);
+			var result = method.DynamicInvoke(resolvedArgs);
+			
+			return await ProcessResultAsync(result);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error: {ex.Message}");
+			return 1;
+		}
+	}
+
+	/// <summary>
+	/// Prepares the execution by setting up the dependency container and resolving method parameters.
+	/// </summary>
+	/// <param name="method">The method to prepare for execution</param>
+	/// <param name="additionalArgs">Additional arguments to resolve against method parameters</param>
+	/// <returns>The resolved arguments for method invocation</returns>
+	private object?[] ResolveDependencies(Delegate method, object[] additionalArgs)
+	{
+		// Create a fresh dependency container for this execution
+		var dependencyContainer = new Dictionary<Type, object>();
+		
+		// First, copy all direct instances
+		foreach (var (key, value) in _instances)
+		{
+			dependencyContainer[key] = value;
+		}
+		
+		// Then resolve all factories with a proper dependency provider
+		var dependencyProvider = new ExecutionDependencyProvider(dependencyContainer, _factories);
+		ResolveAllFactories(dependencyProvider, dependencyContainer, additionalArgs);
+		
+		return ResolveMethodParameters(method, additionalArgs, dependencyContainer);
+	}
+
+	/// <summary>
+	/// Processes the result of a synchronous method execution.
+	/// </summary>
+	/// <param name="result">The result from method execution</param>
+	/// <returns>Exit code</returns>
+	private static int ProcessResult(object? result)
+	{
+		return result switch
+		{
+			int intValue => intValue,
+			Task<int> task => task.GetAwaiter().GetResult(),
+			Task => 0, // Task without return value = success
+			null => 0, // void method = success
+			_ => throw new InvalidOperationException($"Method must return int, Task<int>, Task, or void. Got: {result.GetType()}")
+		};
+	}
+
+	/// <summary>
+	/// Processes the result of an asynchronous method execution.
+	/// </summary>
+	/// <param name="result">The result from method execution</param>
+	/// <returns>Task that returns exit code</returns>
+	private static async Task<int> ProcessResultAsync(object? result)
+	{
+		return result switch
+		{
+			int intValue => intValue,
+			Task<int> task => await task,
+			Task task => await ProcessTaskAsync(task),
+			null => 0, // void method = success
+			_ => throw new InvalidOperationException($"Method must return int, Task<int>, Task, or void. Got: {result.GetType()}")
+		};
+	}
+
+	/// <summary>
+	/// Helper method to process a non-generic Task.
+	/// </summary>
+	/// <param name="task">The task to await</param>
+	/// <returns>Always returns 0 (success)</returns>
+	private static async Task<int> ProcessTaskAsync(Task task)
+	{
+		await task;
+		return 0;
+	}
+
+	/// <summary>
 	/// Resolves all registered factories to ensure all dependencies are instantiated.
 	/// </summary>
-	private void ResolveAllFactories(IDependencyProvider provider, Dictionary<Type, object> container)
+	private void ResolveAllFactories(IDependencyProvider provider, Dictionary<Type, object> container, object[] additionalArgs)
 	{
 		// Create a copy of factory entries to avoid modification during iteration
 		var factoriesToResolve = _factories.ToArray();
@@ -214,7 +287,9 @@ public class Application : IDependencyProvider
 			// Only resolve if not already instantiated
 			if (!container.ContainsKey(type))
 			{
-				var instance = factory(provider) ?? throw new InvalidOperationException($"Factory for type {type.Name} returned null");
+				// Create an enhanced provider that can resolve from both container and additional args
+				var enhancedProvider = new EnhancedExecutionDependencyProvider(container, _factories, additionalArgs);
+				var instance = factory(enhancedProvider) ?? throw new InvalidOperationException($"Factory for type {type.Name} returned null");
 				container[type] = instance;
 			}
 		}
