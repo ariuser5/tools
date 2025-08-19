@@ -13,12 +13,12 @@ static class GmailFilterOptionsExtensions
 	/// <param name="maxResults">Maximum number of results (from command-specific options).</param>
 	/// <param name="pageToken">Page token for pagination (from command-specific options).</param>
 	/// <returns>An EmailFilter configured with all provided options.</returns>
-	public static EmailFilter ToEmailFilter(this GmailFilterOptions options, int maxResults = 10, string? pageToken = null)
+	public static EmailFilter ToEmailFilter(this GmailFilterOptions options, string? pageToken = null)
 	{
 		var filter = new EmailFilter
 		{
 			Query = options.Query,
-			MaxResults = maxResults,
+			MaxResults = options.MaxResults,
 			UnreadOnly = options.UnreadOnly,
 			FromEmail = options.FromEmail,
 			Subject = options.Subject,

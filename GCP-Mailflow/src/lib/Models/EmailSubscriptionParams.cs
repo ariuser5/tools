@@ -39,10 +39,4 @@ public record EmailSubscriptionParams
     /// Gets or sets the last updated timestamp.
     /// </summary>
     public DateTime LastUpdated { get; init; } = DateTime.UtcNow;
-    
-    /// <summary>
-    /// Gets or sets the last history ID processed.
-    /// NOTE: Used internally for tracking email changes.
-    /// </summary>
-    internal ulong? LastHistoryId { get; set; }
 }

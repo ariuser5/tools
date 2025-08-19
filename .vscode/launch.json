@@ -68,6 +68,21 @@
             "cwd": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0",
             "console": "integratedTerminal",
             "stopAtEntry": false,
+        },
+        {
+            "name": "Debug Mailflow - Polling for a short duration",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0/mailflow.exe",
+            "args": [
+                "subscribe",
+                "--duration", "60s",
+                "--interval", "10",
+                "-v", "4"
+            ],
+            "cwd": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
         }
 	]
 }

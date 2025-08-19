@@ -27,4 +27,7 @@ public abstract record GmailFilterOptions
 
 	[Option("include-spam", Required = false, Default = false, HelpText = "Include spam and trash emails.")]
 	public bool IncludeSpamTrash { get; set; } = false;
+	
+	[Option('m', "max", Required = false, Default = 10, HelpText = "Maximum number of emails to process per check.")]
+    public int MaxResults { get; set; } = 10;
 }

@@ -23,13 +23,10 @@ public record SubscribeOptions : BaseOptions
     [Option('i', "interval", Required = false, Default = 30, HelpText = "Polling interval in seconds (when not using push notifications).")]
     public int PollingInterval { get; set; } = 30;
 
-    [Option('m', "max", Required = false, Default = 50, HelpText = "Maximum number of emails to process per check.")]
-    public int MaxResults { get; set; } = 50;
-
     [Option("webhook", Required = false, HelpText = "Webhook URL for notifications.")]
     public string? WebhookUrl { get; set; }
 
-    [Option("duration", Required = false, HelpText = "Duration to run subscription (e.g., '1h', '30m', '2d'). Leave empty for indefinite.")]
+    [Option('d', "duration", Required = false, HelpText = "Duration to run subscription (e.g., '1h', '30m', '2d'). Leave empty for indefinite.")]
     public string? Duration { get; set; }
 
     [Option("push", Required = false, Default = false, HelpText = "Use push notifications instead of polling.")]
@@ -113,11 +110,12 @@ public class SubscribeCommand(
     private static EmailSubscriptionParams BuildEmailSubscription(SubscribeOptions options)
     {
         // Auto-generate name if not provided
-        var subscriptionName = options.Name ?? $"subscription-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..8]}";
+        var subscriptionName = options.Name
+            ?? $"subscription-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..8]}";
 
         // Use the extension method to convert to EmailFilter
         // Both --query and individual flags will be combined for comprehensive filtering
-        var filter = options.ToEmailFilter(maxResults: options.MaxResults);
+        var filter = options.ToEmailFilter();
 
         return new EmailSubscriptionParams
         {
@@ -385,7 +383,7 @@ public class SubscribeCommand(
     /// </summary>
     /// <param name="durationString">The duration string.</param>
     /// <returns>The parsed TimeSpan or null if invalid.</returns>
-    private TimeSpan? ParseDuration(string? durationString)
+    private static TimeSpan? ParseDuration(string? durationString)
     {
         if (string.IsNullOrEmpty(durationString))
             return null;
@@ -415,7 +413,7 @@ public class SubscribeCommand(
     private async Task OutputEmailsAsync(List<EmailMessage> emails, SubscribeOptions options, CancellationToken cancellationToken = default)
     {
         // Determine if we're writing to file or console
-        var writeToFile = !string.IsNullOrEmpty(options.Output) && options.Output != "_";
+        var writeToFile = !string.IsNullOrEmpty(options.Output) && options.Output != "-";
         
         if (writeToFile)
         {
@@ -438,7 +436,7 @@ public class SubscribeCommand(
         }
         else
         {
-            // Write to console (when OutputFile is "_")
+            // Write to console (when OutputFile is "-")
             OutputEmailsToStream(emails, options);
         }
 

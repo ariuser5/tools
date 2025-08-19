@@ -40,31 +40,20 @@ public class EmailPoller : IDisposable
             cancellationToken, _cancellationTokenSource.Token
         ).Token;
 
-        var subscriptionRef = subscription with { };
+        var filterSnapshot = subscription.Filter with { };
+        var lastHistoryId = GetLastEmail(filterSnapshot, combinedToken);
+        
+        if (lastHistoryId == null) yield break;
 
         while (!combinedToken.IsCancellationRequested)
         {
-            yield return await (subscriptionRef.LastHistoryId.HasValue
-                ? CheckHistoryForNewEmailsAsync(subscriptionRef, cancellationToken)
-                : _emailFetcher.FetchEmailsAsync(subscriptionRef.Filter, cancellationToken));
+            var newEmails = await PollSinceHistoryAsync(lastHistoryId.Value, filterSnapshot, combinedToken);
+            lastHistoryId = newEmails.Max(email => email.HistoryId) ?? lastHistoryId;
+            yield return newEmails;
 
             var delay = TimeSpan.FromSeconds(subscription.PollingIntervalSeconds);
             await Task.Delay(delay, combinedToken);
         }
-    }
-
-    /// <summary>
-    /// Polls for emails once and returns the results.
-    /// Useful for one-time checks or manual polling.
-    /// </summary>
-    /// <param name="filter">The email filter to apply.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A list of matching emails.</returns>
-    public async Task<List<EmailMessage>> PollOnceAsync(
-        EmailFilter filter,
-        CancellationToken cancellationToken = default)
-    {
-        return await _emailFetcher.FetchEmailsAsync(filter, cancellationToken);
     }
 
     /// <summary>
@@ -79,62 +68,18 @@ public class EmailPoller : IDisposable
         EmailFilter? filter = null,
         CancellationToken cancellationToken = default)
     {
-        var (emails, _) = await PollHistoryInternalAsync(startHistoryId, filter, cancellationToken);
-        return emails;
-    }
-
-    /// <summary>
-    /// Checks Gmail history for new emails since the last history ID in the subscription.
-    /// Updates the subscription's LastHistoryId as it processes.
-    /// </summary>
-    /// <param name="subscription">The subscription configuration with LastHistoryId set.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A list of new emails found.</returns>
-    private async Task<List<EmailMessage>> CheckHistoryForNewEmailsAsync(
-        EmailSubscriptionParams subscription,
-        CancellationToken cancellationToken)
-    {
-        var (emails, latestHistoryId) = await PollHistoryInternalAsync(
-            subscription.LastHistoryId!.Value, 
-            subscription.Filter, 
-            cancellationToken);
-            
-        // Update the subscription's history ID with the latest we processed
-        if (latestHistoryId.HasValue)
-            subscription.LastHistoryId = latestHistoryId.Value;
-            
-        return emails;
-    }
-
-    /// <summary>
-    /// Core method for polling Gmail history. Handles the common logic shared between
-    /// PollSinceHistoryAsync and CheckHistoryForNewEmailsAsync.
-    /// </summary>
-    /// <param name="startHistoryId">The history ID to start from.</param>
-    /// <param name="filter">Optional filter to apply to found emails.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A tuple containing the emails found and the latest history ID processed.</returns>
-    private async Task<(List<EmailMessage> emails, ulong? latestHistoryId)> PollHistoryInternalAsync(
-        ulong startHistoryId,
-        EmailFilter? filter,
-        CancellationToken cancellationToken)
-    {
         var request = _gmailService.Users.History.List("me");
         request.StartHistoryId = startHistoryId;
         request.HistoryTypes = UsersResource.HistoryResource.ListRequest.HistoryTypesEnum.MessageAdded;
 
         var response = await request.ExecuteAsync(cancellationToken);
         var newMessages = new List<EmailMessage>();
-        ulong? latestHistoryId = null;
 
         if (response.History == null || response.History.Count < 1)
-            return (newMessages, latestHistoryId);
+            return newMessages;
 
         foreach (var history in response.History)
         {
-            if (history.Id > startHistoryId)
-                latestHistoryId = history.Id;
-
             if (history.MessagesAdded != null)
             {
                 foreach (var messageAdded in history.MessagesAdded)
@@ -148,7 +93,19 @@ public class EmailPoller : IDisposable
             }
         }
         
-        return (newMessages, latestHistoryId);
+        return newMessages;
+    }
+
+    private ulong? GetLastEmail(EmailFilter filter, CancellationToken cancellationToken)
+    {
+        // Fetch the last email based on the filter criteria
+        var oneEmailFilter = filter with { MaxResults = 1 };
+        var result = _emailFetcher.FetchEmailsAsync(oneEmailFilter, cancellationToken).Result;
+
+        if (result.Count < 1)
+            return 0;
+
+        return result.Single().HistoryId;
     }
 
     /// <summary>

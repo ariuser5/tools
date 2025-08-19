@@ -12,9 +12,6 @@ namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 [Verb("fetch", HelpText = "Fetch emails from Gmail based on specified criteria. The --query and individual filter flags can be combined for comprehensive filtering.")]
 public record FetchOptions : BaseOptions
 {
-	[Option('m', "max", Required = false, Default = 10, HelpText = "Maximum number of emails to fetch.")]
-	public int MaxResults { get; set; } = 10;
-
 	[Option('f', "output-format", Required = false, HelpText = "Output format: console, json, csv.")]
 	public string OutputFormat { get; set; } = "console";
 
@@ -39,7 +36,7 @@ public class FetchCommand(EmailFetcher emailFetcher, ILogger logger)
 
             // Use the extension method to convert to EmailFilter
             // Both --query and individual flags will be combined for comprehensive filtering
-            var filter = options.ToEmailFilter(options.MaxResults, options.PageToken);
+            var filter = options.ToEmailFilter(options.PageToken);
 
             if (filter.MaxResults <= 0)
             {
