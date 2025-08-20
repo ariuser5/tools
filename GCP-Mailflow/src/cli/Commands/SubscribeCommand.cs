@@ -67,12 +67,12 @@ public class SubscribeCommand(
                 return 1;
             }
 
-            var subscription = BuildEmailSubscription(options);
-            logger.Info($"Subscription ID: {subscription.Name}");
-
             // Calculate duration if specified
             var duration = ParseDuration(options.Duration);
             var endTime = duration.HasValue ? DateTime.UtcNow.Add(duration.Value) : (DateTime?)null;
+
+            var subscription = BuildEmailSubscription(options, endTime);
+            logger.Info($"Subscription ID: {subscription.Name}");
 
             if (options.UsePushNotifications && !string.IsNullOrEmpty(options.TopicName))
             {
@@ -80,7 +80,7 @@ public class SubscribeCommand(
             }
             else
             {
-                await StartPollingAsync(subscription, endTime, options, cancellationToken);
+                await StartPollingAsync(subscription, options, cancellationToken);
             }
 
             logger.Info("Email subscription completed.");
@@ -102,8 +102,9 @@ public class SubscribeCommand(
     /// Builds an EmailSubscription from the command options.
     /// </summary>
     /// <param name="options">The subscribe command options.</param>
+    /// <param name="endTime">The calculated end time for the subscription.</param>
     /// <returns>The constructed EmailSubscription.</returns>
-    private static EmailSubscriptionParams BuildEmailSubscription(SubscribeOptions options)
+    private static EmailSubscriptionParams BuildEmailSubscription(SubscribeOptions options, DateTime? endTime)
     {
         // Auto-generate name if not provided
         var subscriptionName = options.Name
@@ -119,7 +120,8 @@ public class SubscribeCommand(
             TopicName = options.TopicName ?? string.Empty,
             Filter = filter,
             CallbackUrl = options.WebhookUrl,
-            PollingIntervalSeconds = options.PollingInterval
+            PollingIntervalSeconds = options.PollingInterval,
+            EndTime = endTime
         };
     }
 
@@ -201,9 +203,6 @@ public class SubscribeCommand(
         SubscribeOptions options,
         CancellationToken cancellationToken)
     {
-        var duration = ParseDuration(options.Duration);
-        var endTime = duration.HasValue ? DateTime.UtcNow.Add(duration.Value) : (DateTime?)null;
-
             logger.Warning("Push notifications are not yet implemented. Please use polling mode.");
         
         if (options.SetupWatch)
@@ -214,12 +213,12 @@ public class SubscribeCommand(
             using var watchCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             // Start watch management in background
-            var watchTask = StartWatchManagementAsync(options, endTime, watchCts.Token);
+            var watchTask = StartWatchManagementAsync(options, subscription.EndTime, watchCts.Token);
 
             try
             {
                 // Start email monitoring as the master task
-                await StartEmailMonitoringAsync(subscription, endTime, cancellationToken);
+                await StartEmailMonitoringAsync(subscription, options, cancellationToken);
             }
             catch
             {
@@ -245,7 +244,7 @@ public class SubscribeCommand(
         }
         else
         {
-            await StartEmailMonitoringAsync(subscription, endTime, cancellationToken);
+            await StartEmailMonitoringAsync(subscription, options, cancellationToken);
         }
     }
 
@@ -291,12 +290,12 @@ public class SubscribeCommand(
     /// This method sets up real push notification handling instead of polling.
     /// </summary>
     /// <param name="subscription">The subscription configuration.</param>
-    /// <param name="endTime">When to stop monitoring (null for indefinite).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="options">The subscribe command options for output configuration.</param>
     private async Task StartEmailMonitoringAsync(
         EmailSubscriptionParams subscription,
-        DateTime? endTime,
-        CancellationToken cancellationToken = default)
+        SubscribeOptions options,
+        CancellationToken cancellationToken)
     {
         logger.Info("Starting email monitoring (push notification mode)...");
 
@@ -317,13 +316,13 @@ public class SubscribeCommand(
 
             // Create a cancellation token that respects the duration
             using var durationCts = new CancellationTokenSource();
-            if (endTime.HasValue)
+            if (subscription.EndTime.HasValue)
             {
-                var remainingTime = endTime.Value - DateTime.UtcNow;
+                var remainingTime = subscription.EndTime.Value - DateTime.UtcNow;
                 if (remainingTime > TimeSpan.Zero)
                 {
                     durationCts.CancelAfter(remainingTime);
-                    logger.Info($"Push notifications will stop at: {endTime.Value:yyyy-MM-dd HH:mm:ss}");
+                    logger.Info($"Push notifications will stop at: {subscription.EndTime.Value:yyyy-MM-dd HH:mm:ss}");
                 }
                 else
                 {
@@ -341,9 +340,15 @@ public class SubscribeCommand(
             // Process messages from the push notification stream
             await foreach (var messageBatch in messageStream.WithCancellation(combinedCts.Token))
             {
-                foreach (var message in messageBatch)
+                if (messageBatch.Count > 0)
                 {
-                    logger.Info($"Received email: {message.Subject} - {message.From}");
+                    logger.Info($"Received {messageBatch.Count} new emails!");
+
+                    // Only output email details if output file is specified
+                    if (!string.IsNullOrEmpty(options.Output))
+                    {
+                        await OutputEmailsAsync(messageBatch, options, cancellationToken);
+                    }
                 }
             }
         }
@@ -375,17 +380,16 @@ public class SubscribeCommand(
     /// Starts polling for emails.
     /// </summary>
     /// <param name="subscription">The subscription configuration.</param>
-    /// <param name="endTime">The time to stop polling (null for indefinite).</param>
     /// <param name="options">The command options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    private async Task StartPollingAsync(EmailSubscriptionParams subscription, DateTime? endTime, SubscribeOptions options, CancellationToken cancellationToken)
+    private async Task StartPollingAsync(EmailSubscriptionParams subscription, SubscribeOptions options, CancellationToken cancellationToken)
     {
         var messageStream = emailPoller.StartPollingAsync(subscription, cancellationToken);
         logger.Info($"Starting email polling every {subscription.PollingIntervalSeconds} seconds");
 
-        if (endTime.HasValue)
+        if (subscription.EndTime.HasValue)
         {
-            logger.Info($"Polling will stop at: {endTime.Value:yyyy-MM-dd HH:mm:ss}");
+            logger.Info($"Polling will stop at: {subscription.EndTime.Value:yyyy-MM-dd HH:mm:ss}");
         }
         else
         {
@@ -394,9 +398,9 @@ public class SubscribeCommand(
 
         // Create a cancellation token that respects the duration
         using var durationCts = new CancellationTokenSource();
-        if (endTime.HasValue)
+        if (subscription.EndTime.HasValue)
         {
-            var remainingTime = endTime.Value - DateTime.UtcNow;
+            var remainingTime = subscription.EndTime.Value - DateTime.UtcNow;
             if (remainingTime > TimeSpan.Zero)
             {
                 durationCts.CancelAfter(remainingTime);

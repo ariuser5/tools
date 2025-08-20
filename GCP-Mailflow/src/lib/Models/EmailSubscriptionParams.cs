@@ -31,6 +31,11 @@ public record EmailSubscriptionParams
     public int PollingIntervalSeconds { get; init; } = 30;
 
     /// <summary>
+    /// Gets or sets the end time for the subscription. If null, the subscription runs indefinitely.
+    /// </summary>
+    public DateTime? EndTime { get; init; }
+
+    /// <summary>
     /// Gets or sets the creation timestamp.
     /// </summary>
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
