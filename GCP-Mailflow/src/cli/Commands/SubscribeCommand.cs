@@ -14,26 +14,32 @@ namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 [Verb("subscribe", HelpText = "Subscribe to email notifications and monitor for new emails. The --query and individual filter flags can be combined for comprehensive filtering.")]
 public record SubscribeOptions : BaseOptions
 {
+    // poll/push common
+    [Option('d', "duration", Required = false, HelpText = "Duration to run subscription (e.g., '1h', '30m', '2d'). Leave empty for indefinite.")]
+    public string? Duration { get; set; }
+
+    [Option("webhook", Required = false, HelpText = "Webhook URL for notifications.")]
+    public string? WebhookUrl { get; set; }
+    // ***
+
+    // polling specific
+    [Option('i', "interval", Required = false, Default = 30, HelpText = "Polling interval in seconds (when not using push notifications).")]
+    public int PollingInterval { get; set; } = 30;
+    // ***
+
+    // push specific
+    [Option("push", Required = false, Default = false, HelpText = "Use push notifications instead of polling.")]
+    public bool UsePushNotifications { get; set; } = false;
+
     [Option('n', "name", Required = false, HelpText = "Name/ID for this subscription. If not provided, a unique ID will be auto-generated.")]
     public string? Name { get; set; }
 
     [Option('t', "topic", Required = false, HelpText = "Cloud Pub/Sub topic name for push notifications.")]
     public string? TopicName { get; set; }
 
-    [Option('i', "interval", Required = false, Default = 30, HelpText = "Polling interval in seconds (when not using push notifications).")]
-    public int PollingInterval { get; set; } = 30;
-
-    [Option("webhook", Required = false, HelpText = "Webhook URL for notifications.")]
-    public string? WebhookUrl { get; set; }
-
-    [Option('d', "duration", Required = false, HelpText = "Duration to run subscription (e.g., '1h', '30m', '2d'). Leave empty for indefinite.")]
-    public string? Duration { get; set; }
-
-    [Option("push", Required = false, Default = false, HelpText = "Use push notifications instead of polling.")]
-    public bool UsePushNotifications { get; set; } = false;
-
     [Option("setup-watch", Required = false, Default = false, HelpText = "Setup Gmail watch request automatically (alternative to using PubSubPrimer).")]
     public bool SetupWatch { get; set; } = false;
+    // ***
 }
 
 
@@ -55,19 +61,10 @@ public class SubscribeCommand(
         {
             logger.Info("Starting email subscription...");
 
-            // Validate options
-            if (options.UsePushNotifications)
+            // Validate options and warn about irrelevant parameters
+            if (!ValidateOptions(options))
             {
-                if (string.IsNullOrEmpty(options.TopicName))
-                {
-                    logger.Error("Topic name is required when using push notifications. Use --topic option.");
-                    return 1;
-                }
-
-                if (options.SetupWatch)
-                    logger.Info("Using automatic Gmail watch setup mode.");
-                else
-                    logger.Info("Using pre-primed topic mode (requires PubSubPrimer setup).");
+                return 1;
             }
 
             var subscription = BuildEmailSubscription(options);
@@ -79,7 +76,6 @@ public class SubscribeCommand(
 
             if (options.UsePushNotifications && !string.IsNullOrEmpty(options.TopicName))
             {
-                logger.Warning("Push notifications are not yet implemented. Using polling mode instead.");
                 await SetupPushNotificationsAsync(subscription, options, cancellationToken);
             }
             else
@@ -128,6 +124,73 @@ public class SubscribeCommand(
     }
 
     /// <summary>
+    /// Validates the subscription options and warns about irrelevant parameters.
+    /// </summary>
+    /// <param name="options">The subscribe command options.</param>
+    /// <returns>True if options are valid, false if there are critical validation errors.</returns>
+    private bool ValidateOptions(SubscribeOptions options)
+    {
+        var isValid = true;
+        var irrelevantParams = new List<string>();
+
+        if (options.UsePushNotifications)
+        {
+            // Push mode validation
+            if (string.IsNullOrEmpty(options.TopicName))
+            {
+                logger.Error("Topic name is required when using push notifications. Use --topic option.");
+                isValid = false;
+            }
+            else
+            {
+                if (options.SetupWatch)
+                    logger.Info("Using automatic Gmail watch setup mode.");
+                else
+                    logger.Info("Using pre-primed topic mode (requires PubSubPrimer setup).");
+            }
+
+            // Warn about polling-specific parameters that are irrelevant in push mode
+            if (options.PollingInterval != 30) // 30 is the default
+            {
+                irrelevantParams.Add("--interval (polling interval is not used in push mode)");
+            }
+        }
+        else
+        {
+            // Polling mode validation
+            if (options.PollingInterval <= 0)
+            {
+                logger.Error("Polling interval must be greater than 0 seconds.");
+                isValid = false;
+            }
+
+            // Warn about push-specific parameters that are irrelevant in polling mode
+            if (!string.IsNullOrEmpty(options.TopicName))
+            {
+                irrelevantParams.Add("--topic (topic name is not used in polling mode)");
+            }
+
+            if (options.SetupWatch)
+            {
+                irrelevantParams.Add("--setup-watch (watch setup is not used in polling mode)");
+            }
+        }
+
+        // Log warnings for irrelevant parameters
+        if (irrelevantParams.Count > 0)
+        {
+            var mode = options.UsePushNotifications ? "push" : "polling";
+            logger.Warning($"The following parameters are not relevant for {mode} mode and will be ignored:");
+            foreach (var param in irrelevantParams)
+            {
+                logger.Warning($"  • {param}");
+            }
+        }
+
+        return isValid;
+    }
+
+    /// <summary>
     /// Sets up push notifications for the subscription.
     /// </summary>
     /// <param name="subscription">The subscription configuration.</param>
@@ -140,15 +203,15 @@ public class SubscribeCommand(
     {
         var duration = ParseDuration(options.Duration);
         var endTime = duration.HasValue ? DateTime.UtcNow.Add(duration.Value) : (DateTime?)null;
-        
+
         if (options.SetupWatch)
         {
             logger.Info("Setting up Gmail watch and starting email monitoring...");
-            
+
             // Start both watch management and email monitoring concurrently
             var watchTask = StartWatchManagementAsync(options, endTime, cancellationToken);
             var monitoringTask = StartEmailMonitoringAsync(subscription, endTime, cancellationToken);
-            
+
             await Task.WhenAll(watchTask, monitoringTask);
         }
         else
@@ -207,22 +270,22 @@ public class SubscribeCommand(
         CancellationToken cancellationToken)
     {
         logger.Info("Starting email monitoring (push notification mode)...");
-        
+
         // TODO: Implement push notification listener setup
         // This would typically involve:
         // 1. Setting up Pub/Sub subscription listener
         // 2. Configuring message handler for incoming notifications
         // 3. Processing Gmail history IDs from push notifications
         // 4. Fetching actual email content when notifications arrive
-        
+
         try
         {
             // Start the push notification listener
             var messageStream = emailSubscriber.StartPushNotificationListenerAsync(
                 subscription, cancellationToken);
-                
+
             logger.Info("Push notification listener started successfully");
-            
+
             // Create a cancellation token that respects the duration
             using var durationCts = new CancellationTokenSource();
             if (endTime.HasValue)
@@ -245,7 +308,7 @@ public class SubscribeCommand(
             }
 
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, durationCts.Token);
-            
+
             // Process messages from the push notification stream
             await foreach (var messageBatch in messageStream.WithCancellation(combinedCts.Token))
             {
@@ -323,7 +386,7 @@ public class SubscribeCommand(
             if (emails.Count > 0)
             {
                 logger.Info($"Received {emails.Count} new emails!");
-                
+
                 // Only output email details if output file is specified
                 if (!string.IsNullOrEmpty(options.Output))
                 {
@@ -333,6 +396,103 @@ public class SubscribeCommand(
         }
     }
 
+    /// <summary>
+    /// Parses a duration string (e.g., "1h", "30m", "2d") into a TimeSpan.
+    /// </summary>
+    /// <param name="durationString">The duration string.</param>
+    /// <returns>The parsed TimeSpan or null if invalid.</returns>
+    private static TimeSpan? ParseDuration(string? durationString)
+    {
+        if (string.IsNullOrEmpty(durationString))
+            return null;
+
+        var regex = new Regex(@"^(\d+)([smhd])$", RegexOptions.IgnoreCase);
+        var match = regex.Match(durationString.Trim());
+
+        if (!match.Success || !int.TryParse(match.Groups[1].Value, out var value))
+            return null;
+
+        return match.Groups[2].Value.ToLowerInvariant() switch
+        {
+            "s" => TimeSpan.FromSeconds(value),
+            "m" => TimeSpan.FromMinutes(value),
+            "h" => TimeSpan.FromHours(value),
+            "d" => TimeSpan.FromDays(value),
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Outputs the received emails to the specified output file or console.
+    /// </summary>
+    /// <param name="emails">The emails to output.</param>
+    /// <param name="options">The subscribe command options.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    private async Task OutputEmailsAsync(List<EmailMessage> emails, SubscribeOptions options, CancellationToken cancellationToken = default)
+    {
+        // Determine if we're writing to file or console
+        var writeToFile = !string.IsNullOrEmpty(options.Output) && options.Output != "-";
+
+        if (writeToFile)
+        {
+            // Write to file
+            await using var fileStream = new FileStream(options.Output!, FileMode.Append, FileAccess.Write);
+            await using var writer = new StreamWriter(fileStream);
+
+            // Temporarily redirect Console.Out to the file
+            var originalOut = Console.Out;
+            Console.SetOut(writer);
+
+            try
+            {
+                OutputEmailsToStream(emails, options);
+            }
+            finally
+            {
+                Console.SetOut(originalOut);
+            }
+        }
+        else
+        {
+            // Write to console (when OutputFile is "-")
+            OutputEmailsToStream(emails, options);
+        }
+
+        // Send webhook notification if configured
+        if (!string.IsNullOrEmpty(options.WebhookUrl))
+        {
+            _ = Task.Run(() => SendWebhookNotificationAsync(emails, options.WebhookUrl), cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Outputs emails to the current output stream.
+    /// </summary>
+    /// <param name="emails">The emails to output.</param>
+    /// <param name="options">The command options.</param>
+    private static void OutputEmailsToStream(List<EmailMessage> emails, SubscribeOptions options)
+    {
+        foreach (var email in emails)
+        {
+            Console.WriteLine($"\n🔔 New Email Alert - {DateTime.Now:HH:mm:ss}");
+            Console.WriteLine($"Subject: {email.Subject}");
+            Console.WriteLine($"From: {email.From}");
+            Console.WriteLine($"Date: {email.Date:yyyy-MM-dd HH:mm:ss}");
+
+            if (options.Verbosity > LogLevel.Info)
+            {
+                Console.WriteLine($"ID: {email.Id}");
+                Console.WriteLine($"Labels: {string.Join(", ", email.Labels)}");
+                if (!string.IsNullOrEmpty(email.Snippet))
+                {
+                    Console.WriteLine($"Snippet: {email.Snippet}");
+                }
+            }
+
+            Console.WriteLine(new string('-', 50));
+        }
+    }
+    
     /// <summary>
     /// Sends a webhook notification for new emails.
     /// </summary>
@@ -375,103 +535,6 @@ public class SubscribeCommand(
         catch (Exception ex)
         {
             logger.Error($"Error sending webhook notification: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Parses a duration string (e.g., "1h", "30m", "2d") into a TimeSpan.
-    /// </summary>
-    /// <param name="durationString">The duration string.</param>
-    /// <returns>The parsed TimeSpan or null if invalid.</returns>
-    private static TimeSpan? ParseDuration(string? durationString)
-    {
-        if (string.IsNullOrEmpty(durationString))
-            return null;
-
-        var regex = new Regex(@"^(\d+)([smhd])$", RegexOptions.IgnoreCase);
-        var match = regex.Match(durationString.Trim());
-
-        if (!match.Success || !int.TryParse(match.Groups[1].Value, out var value))
-            return null;
-
-        return match.Groups[2].Value.ToLowerInvariant() switch
-        {
-            "s" => TimeSpan.FromSeconds(value),
-            "m" => TimeSpan.FromMinutes(value),
-            "h" => TimeSpan.FromHours(value),
-            "d" => TimeSpan.FromDays(value),
-            _ => null
-        };
-    }
-
-    /// <summary>
-    /// Outputs the received emails to the specified output file or console.
-    /// </summary>
-    /// <param name="emails">The emails to output.</param>
-    /// <param name="options">The subscribe command options.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    private async Task OutputEmailsAsync(List<EmailMessage> emails, SubscribeOptions options, CancellationToken cancellationToken = default)
-    {
-        // Determine if we're writing to file or console
-        var writeToFile = !string.IsNullOrEmpty(options.Output) && options.Output != "-";
-        
-        if (writeToFile)
-        {
-            // Write to file
-            await using var fileStream = new FileStream(options.Output!, FileMode.Append, FileAccess.Write);
-            await using var writer = new StreamWriter(fileStream);
-            
-            // Temporarily redirect Console.Out to the file
-            var originalOut = Console.Out;
-            Console.SetOut(writer);
-            
-            try
-            {
-                OutputEmailsToStream(emails, options);
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-        else
-        {
-            // Write to console (when OutputFile is "-")
-            OutputEmailsToStream(emails, options);
-        }
-
-        // Send webhook notification if configured
-        if (!string.IsNullOrEmpty(options.WebhookUrl))
-        {
-            _ = Task.Run(() => SendWebhookNotificationAsync(emails, options.WebhookUrl), cancellationToken);
-        }
-    }
-
-    /// <summary>
-    /// Outputs emails to the current output stream.
-    /// </summary>
-    /// <param name="emails">The emails to output.</param>
-    /// <param name="options">The command options.</param>
-    private static void OutputEmailsToStream(List<EmailMessage> emails, SubscribeOptions options)
-    {
-        foreach (var email in emails)
-        {
-            Console.WriteLine($"\n🔔 New Email Alert - {DateTime.Now:HH:mm:ss}");
-            Console.WriteLine($"Subject: {email.Subject}");
-            Console.WriteLine($"From: {email.From}");
-            Console.WriteLine($"Date: {email.Date:yyyy-MM-dd HH:mm:ss}");
-            
-            if (options.Verbosity > LogLevel.Info)
-            {
-                Console.WriteLine($"ID: {email.Id}");
-                Console.WriteLine($"Labels: {string.Join(", ", email.Labels)}");
-                if (!string.IsNullOrEmpty(email.Snippet))
-                {
-                    Console.WriteLine($"Snippet: {email.Snippet}");
-                }
-            }
-            
-            Console.WriteLine(new string('-', 50));
         }
     }
 }
