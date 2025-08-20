@@ -204,19 +204,47 @@ public class SubscribeCommand(
         var duration = ParseDuration(options.Duration);
         var endTime = duration.HasValue ? DateTime.UtcNow.Add(duration.Value) : (DateTime?)null;
 
+            logger.Warning("Push notifications are not yet implemented. Please use polling mode.");
+        
         if (options.SetupWatch)
         {
             logger.Info("Setting up Gmail watch and starting email monitoring...");
 
-            // Start both watch management and email monitoring concurrently
-            var watchTask = StartWatchManagementAsync(options, endTime, cancellationToken);
-            var monitoringTask = StartEmailMonitoringAsync(subscription, endTime, cancellationToken);
+            // Create a cancellation token source for coordinated cancellation
+            using var watchCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            await Task.WhenAll(watchTask, monitoringTask);
+            // Start watch management in background
+            var watchTask = StartWatchManagementAsync(options, endTime, watchCts.Token);
+
+            try
+            {
+                // Start email monitoring as the master task
+                await StartEmailMonitoringAsync(subscription, endTime, cancellationToken);
+            }
+            catch
+            {
+                // If monitoring fails, cancel the watch management
+                logger.Info("Stopping watch management due to monitoring failure...");
+                watchCts.Cancel();
+                throw;
+            }
+            finally
+            {
+                // Ensure watch management is stopped and we wait for cleanup
+                watchCts.Cancel();
+                try
+                {
+                    await watchTask;
+                }
+                catch (OperationCanceledException) { /* Expected */ }
+                catch (Exception ex)
+                {
+                    logger.Warning($"Error during watch management cleanup: {ex.Message}");
+                }
+            }
         }
         else
         {
-            logger.Warning("Push notifications are not yet implemented. Please use polling mode.");
             await StartEmailMonitoringAsync(subscription, endTime, cancellationToken);
         }
     }
@@ -235,10 +263,11 @@ public class SubscribeCommand(
         GmailWatchManager? watchManager = null;
         try
         {
-            watchManager = new GmailWatchManager(gmailService, logger);
+            var watchAppName = options.Name ?? AppDomain.CurrentDomain.FriendlyName;
+            watchManager = new GmailWatchManager(gmailService, logger, watchAppName);
             await watchManager.StartWatchManagementAsync(
                 topicName: options.TopicName!,
-                labelIds: null, // Let the watch manager handle label filtering. TODO: Why?
+                labelIds: Utils.ParseLabels(options.Labels ?? string.Empty),
                 endTime: endTime,
                 cancellationToken: cancellationToken);
         }
@@ -267,7 +296,7 @@ public class SubscribeCommand(
     private async Task StartEmailMonitoringAsync(
         EmailSubscriptionParams subscription,
         DateTime? endTime,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         logger.Info("Starting email monitoring (push notification mode)...");
 

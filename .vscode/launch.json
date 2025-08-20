@@ -17,8 +17,6 @@
             "console": "integratedTerminal",
             "stopAtEntry": false,
             "env": {
-                "GCP_PUBSUB_PROJECTID": "smart-home-409915",
-                "GCP_PUBSUB_TOPICID": "gmailToTask",
                 "GCP_CREDENTIALS_PATH": "C:\\Users\\dariu\\_secrets\\GCP\\client_secret_566540516747-q0a8n9uteh0q8f4a7qd7vvi6f06tuqii.apps.googleusercontent.com.json"
             }
         },
@@ -78,6 +76,24 @@
                 "subscribe",
                 "--duration", "60s",
                 "--interval", "10",
+                "-v", "4"
+            ],
+            "cwd": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+        },
+        {
+            "name": "Debug Mailflow - Push for a short duration",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0/mailflow.exe",
+            "args": [
+                "subscribe", "--push",
+                "--name", "My-Push-Gmail-Demo",
+                "--topic", "projects/smart-home-409915/topics/gmailToTask",
+                "--labels", "INBOX",
+                "--duration", "60s",
+                "--setup-watch",
                 "-v", "4"
             ],
             "cwd": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0",

@@ -39,7 +39,7 @@ public class GmailWatchBroker : IDisposable
     {
         if (_disposed) throw new ObjectDisposedException(nameof(GmailWatchBroker));
         
-        var watchResult = await _watchBrokerService.WatchGmailAsync(topicName, labelIds, forceNew: false, cancellationToken);
+        var watchResult = await _watchBrokerService.WatchGmailAsync(topicName, labelIds, forceNew: true, cancellationToken);
         return watchResult.Response;
     }
 

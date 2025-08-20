@@ -12,7 +12,7 @@ namespace DCiuve.Gcp.Mailflow.Cli.Services;
 public class GmailWatchManager(
     GmailService gmailService,
     ILogger logger,
-    string applicationName = "My Gmail Client CLI"
+    string applicationName = "My-Gmail-Client-CLI"
 ) : IDisposable
 {
     /// <summary>
@@ -77,10 +77,6 @@ public class GmailWatchManager(
         catch (OperationCanceledException)
         {
             _logger.Info("Gmail watch management cancelled.");
-        }
-        finally
-        {
-            await StopWatchManagementAsync();
         }
     }
 
@@ -161,12 +157,12 @@ public class GmailWatchManager(
             if (endTime.HasValue && existingWatch.Expiration < endTime.Value)
             {
                 var timeUntilExpiration = existingWatch.Expiration - DateTime.UtcNow;
-                _logger.Info($"Current watch expires before subscription ends. Will renew in {timeUntilExpiration:hh\\:mm\\:ss}.");
+                _logger.Info($"Current watch expires before subscription ends. Will renew in {timeUntilExpiration:%h'h '%m'm'}.");
             }
             else if (!endTime.HasValue)
             {
                 var timeUntilExpiration = existingWatch.Expiration - DateTime.UtcNow;
-                _logger.Info($"Will renew watch in {timeUntilExpiration:hh\\:mm\\:ss} (indefinite subscription).");
+                _logger.Info($"Will renew watch in {timeUntilExpiration:%h'h '%m'm'} (indefinite subscription).");
             }
         }
         else
@@ -210,18 +206,23 @@ public class GmailWatchManager(
 
             _logger.Info($"Gmail watch created successfully. History ID: {watchResponse.HistoryId}, Expiration: {expirationDisplay} UTC");
 
-            // Get the watch ID from the state that was just saved
-            var newWatchState = await _watchBroker.GetActiveWatchStateAsync();
-            if (newWatchState != null)
+            var watchId = watchResponse.HistoryId?.ToString();
+            if (watchId == null)
             {
-                _ownedWatchId = newWatchState.WatchId;
+                var newWatchState = await _watchBroker.GetActiveWatchStateAsync();
+                watchId = newWatchState?.WatchId;
+            }
+
+            if (watchId != null)
+            {
+                _ownedWatchId = watchId;
                 _logger.Debug($"Stored owned watch ID for cancellation: {_ownedWatchId}");
             }
 
             if (expirationDateTime.HasValue)
             {
                 var timeUntilExpiration = expirationDateTime.Value - DateTime.UtcNow;
-                _logger.Debug($"Watch will expire in {timeUntilExpiration:d\\.hh\\:mm\\:ss}");
+                _logger.Debug($"Watch will expire in {timeUntilExpiration:%h'h '%m'm'}");
             }
         }
         catch (Exception ex)
@@ -260,11 +261,11 @@ public class GmailWatchManager(
         if (timeUntilRenewal <= TimeSpan.FromMinutes(1))
         {
             timeUntilRenewal = TimeSpan.FromMinutes(1);
-            _logger.Info($"Watch expires soon (in {timeUntilExpiration:hh\\:mm\\:ss}). Scheduling immediate renewal check.");
+            _logger.Info($"Watch expires soon (in {timeUntilExpiration:%h'h '%m'm'}). Scheduling immediate renewal check.");
         }
         else
         {
-            _logger.Info($"Watch expires in {timeUntilExpiration:d\\.hh\\:mm\\:ss}. Scheduling renewal check in {timeUntilRenewal:d\\.hh\\:mm\\:ss}.");
+            _logger.Info($"Watch expires in {timeUntilExpiration:%h'h '%m'm'}. Scheduling renewal check in {timeUntilRenewal:%h'h '%m'm'}.");
         }
 
         ScheduleRenewalTimer(timeUntilRenewal, topicName, labelIds, endTime, cancellationToken);
@@ -321,7 +322,7 @@ public class GmailWatchManager(
             
             if (timeUntilExpiration <= renewalThreshold)
             {
-                _logger.Info($"Watch expires in {timeUntilExpiration:hh\\:mm\\:ss}. Renewing now...");
+                _logger.Info($"Watch expires in {timeUntilExpiration:%h'h '%m'm'}. Renewing now...");
                 
                 // Check if we should continue renewing based on end time
                 if (endTime.HasValue)
@@ -348,7 +349,7 @@ public class GmailWatchManager(
             }
             else
             {
-                _logger.Debug($"Watch renewal check: expires in {timeUntilExpiration:d\\.hh\\:mm\\:ss}, no renewal needed yet.");
+                _logger.Debug($"Watch renewal check: expires in {timeUntilExpiration:%h'h '%m'm'}, no renewal needed yet.");
                 // Reschedule the next check (this shouldn't normally happen with proper scheduling)
                 await ScheduleNextRenewalCheckAsync(topicName, labelIds, endTime, cancellationToken);
             }
@@ -372,7 +373,7 @@ public class GmailWatchManager(
             _renewalTimer = null;
             _watchBroker?.Dispose();
             _disposed = true;
-            _logger.Info("Gmail watch manager disposed (sync cleanup only).");
+            _logger.Debug("Gmail watch manager disposed (sync cleanup only).");
         }
     }
 }

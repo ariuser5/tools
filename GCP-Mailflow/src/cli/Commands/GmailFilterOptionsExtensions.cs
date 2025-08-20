@@ -40,10 +40,7 @@ static class GmailFilterOptionsExtensions
 		// Parse label IDs
 		if (!string.IsNullOrEmpty(options.Labels))
 		{
-			filter.LabelIds = options.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)
-				.Select(l => l.Trim())
-				.Where(l => !string.IsNullOrEmpty(l))
-				.ToList();
+			filter.LabelIds = [.. Utils.ParseLabels(options.Labels)];
 		}
 
 		return filter;

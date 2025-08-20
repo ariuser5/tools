@@ -102,7 +102,7 @@ public class GcpWatchBrokerService : IGcpExtensionService, IDisposable
             topicName,
             new Dictionary<string, object>
             {
-                ["labelIds"] = labelIds ?? new[] { "INBOX" }
+                ["labelIds"] = watchRequest.LabelIds
             });
 
         return new WatchResult<WatchResponse>(

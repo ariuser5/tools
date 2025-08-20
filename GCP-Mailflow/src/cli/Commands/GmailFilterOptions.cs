@@ -19,8 +19,8 @@ public abstract record GmailFilterOptions
 	[Option("before", Required = false, HelpText = "Filter emails before this date (yyyy-MM-dd).")]
 	public string? DateBefore { get; set; }
 
-	[Option("labels", Required = false, HelpText = "Comma-separated list of label IDs to filter by.")]
-	public string? Labels { get; set; }
+	[Option("labels", Required = false, Default = "INBOX", HelpText = "Comma-separated list of label IDs to filter by.")]
+	public string Labels { get; set; } = "INBOX";
 
 	[Option("unread", Required = false, Default = false, HelpText = "Fetch only unread emails.")]
 	public bool UnreadOnly { get; set; } = false;
