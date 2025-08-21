@@ -1,33 +1,30 @@
 using CommandLine;
 
-namespace DCiuve.Gcp.Mailflow.Cli.Commands;
+namespace DCiuve.Gcp.App.Shared.Gmail.CommandLine;
 
-public abstract record GmailFilterOptions
+public interface IGmailQuickFilterOptions
 {
-	[Option('q', "query", Required = false, HelpText = "Gmail query string to filter emails. Can be combined with individual filter flags for comprehensive filtering.")]
-	public string Query { get; set; } = string.Empty;
-
 	[Option("from", Required = false, HelpText = "Filter emails from specific sender.")]
-	public string? FromEmail { get; set; }
-
+	string? FromEmail { get; set; }
+	
 	[Option("subject", Required = false, HelpText = "Filter emails by subject containing this text.")]
-	public string? Subject { get; set; }
-
+	string? Subject { get; set; }
+	
 	[Option("after", Required = false, HelpText = "Filter emails after this date (yyyy-MM-dd).")]
-	public string? DateAfter { get; set; }
+	string? DateAfter { get; set; }
 
 	[Option("before", Required = false, HelpText = "Filter emails before this date (yyyy-MM-dd).")]
-	public string? DateBefore { get; set; }
-
+	string? DateBefore { get; set; }
+	
 	[Option("labels", Required = false, Default = "INBOX", HelpText = "Comma-separated list of label IDs to filter by.")]
-	public string Labels { get; set; } = "INBOX";
+	string Labels { get; set; }
 
 	[Option("unread", Required = false, Default = false, HelpText = "Fetch only unread emails.")]
-	public bool UnreadOnly { get; set; } = false;
+	bool UnreadOnly { get; set; }
 
 	[Option("include-spam", Required = false, Default = false, HelpText = "Include spam and trash emails.")]
-	public bool IncludeSpamTrash { get; set; } = false;
-	
+	bool IncludeSpamTrash { get; set; }
+
 	[Option('m', "max", Required = false, Default = 10, HelpText = "Maximum number of emails to process per check.")]
-    public int MaxResults { get; set; } = 10;
+	int MaxResults { get; set; }
 }

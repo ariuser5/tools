@@ -1,8 +1,8 @@
 using DCiuve.Gcp.ExtensionDomain;
+using DCiuve.Gcp.ExtensionDomain.Gmail;
 using DCiuve.Gcp.Mailflow.Services;
 using DCiuve.Gcp.PubSub;
 using DCiuve.Shared.Logging;
-using Google.Apis.Gmail.v1;
 
 namespace DCiuve.Gcp.Mailflow.Cli.Services;
 
@@ -10,9 +10,9 @@ namespace DCiuve.Gcp.Mailflow.Cli.Services;
 /// Manages Gmail watch lifecycle including creation, renewal, and expiration handling.
 /// </summary>
 public class GmailWatchManager(
-    GmailService gmailService,
+    IGmailClient gmailClient,
     ILogger logger,
-    string applicationName = "My-Gmail-Client-CLI"
+    string applicationName
 ) : IDisposable
 {
     /// <summary>
@@ -31,7 +31,7 @@ public class GmailWatchManager(
     private const int WatchRenewalAdvanceMinutes = 15;
     
 	private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    private readonly GmailWatchBroker _watchBroker = new(gmailService, applicationName);
+    private readonly GmailWatchBroker _watchBroker = new(gmailClient, applicationName);
     private Timer? _renewalTimer;
     private bool _disposed;
     private bool _owningWatch;

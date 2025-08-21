@@ -1,4 +1,4 @@
-
+using DCiuve.Gcp.App.Shared.Gmail.CommandLine;
 using DCiuve.Gcp.Mailflow.Models;
 
 namespace DCiuve.Gcp.Mailflow.Cli.Commands;
@@ -13,7 +13,7 @@ static class GmailFilterOptionsExtensions
 	/// <param name="maxResults">Maximum number of results (from command-specific options).</param>
 	/// <param name="pageToken">Page token for pagination (from command-specific options).</param>
 	/// <returns>An EmailFilter configured with all provided options.</returns>
-	public static EmailFilter ToEmailFilter(this GmailFilterOptions options, string? pageToken = null)
+	public static EmailFilter ToEmailFilter(this GmailFilterOptionsBase options, string? pageToken = null)
 	{
 		var filter = new EmailFilter
 		{
@@ -40,9 +40,21 @@ static class GmailFilterOptionsExtensions
 		// Parse label IDs
 		if (!string.IsNullOrEmpty(options.Labels))
 		{
-			filter.LabelIds = [.. Utils.ParseLabels(options.Labels)];
+			filter.LabelIds = [..ParseLabels(options.Labels)];
 		}
 
 		return filter;
+	}
+	
+	private static string[] ParseLabels(string labels)
+	{
+		if (string.IsNullOrWhiteSpace(labels))
+			return [];
+
+		return [.. labels
+			.Split([','], StringSplitOptions.RemoveEmptyEntries)
+			.Select(label => label.Trim())
+			.Where(label => !string.IsNullOrEmpty(label))
+		];
 	}
 }

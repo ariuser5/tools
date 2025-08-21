@@ -219,11 +219,10 @@ public class Application : IDependencyProvider
 			dependencyContainer[key] = value;
 		}
 		
-		// Then resolve all factories with a proper dependency provider
-		var dependencyProvider = new ExecutionDependencyProvider(dependencyContainer, _factories);
-		ResolveAllFactories(dependencyProvider, dependencyContainer, additionalArgs);
+		// Create a lazy dependency provider - don't resolve factories yet
+		var dependencyProvider = new LazyExecutionDependencyProvider(dependencyContainer, _factories, additionalArgs);
 		
-		return ResolveMethodParameters(method, additionalArgs, dependencyContainer);
+		return ResolveMethodParameters(method, additionalArgs, dependencyProvider);
 	}
 
 	/// <summary>
@@ -272,33 +271,13 @@ public class Application : IDependencyProvider
 	}
 
 	/// <summary>
-	/// Resolves all registered factories to ensure all dependencies are instantiated.
-	/// </summary>
-	private void ResolveAllFactories(IDependencyProvider provider, Dictionary<Type, object> container, object[] additionalArgs)
-	{
-		// Create a copy of factory entries to avoid modification during iteration
-		var factoriesToResolve = _factories.ToArray();
-
-		foreach (var kvp in factoriesToResolve)
-		{
-			var type = kvp.Key;
-			var factory = kvp.Value;
-
-			// Only resolve if not already instantiated
-			if (!container.ContainsKey(type))
-			{
-				// Create an enhanced provider that can resolve from both container and additional args
-				var enhancedProvider = new EnhancedExecutionDependencyProvider(container, _factories, additionalArgs);
-				var instance = factory(enhancedProvider) ?? throw new InvalidOperationException($"Factory for type {type.Name} returned null");
-				container[type] = instance;
-			}
-		}
-	}
-
-	/// <summary>
 	/// Resolves method parameters by matching types from registered services and additional arguments.
+	/// Uses lazy resolution - factories are only called when their services are actually needed.
 	/// </summary>
-	private static object?[] ResolveMethodParameters(Delegate method, object[] additionalArgs, Dictionary<Type, object> dependencyContainer)
+	/// Resolves method parameters by matching types from registered services and additional arguments.
+	/// Uses lazy resolution - factories are only called when their services are actually needed.
+	/// </summary>
+	private static object?[] ResolveMethodParameters(Delegate method, object[] additionalArgs, LazyExecutionDependencyProvider dependencyProvider)
 	{
 		var methodInfo = method.Method;
 		var parameters = methodInfo.GetParameters();
@@ -340,8 +319,8 @@ public class Application : IDependencyProvider
 				continue;
 			}
 			
-			// Then try to resolve from the dependency container
-			if (dependencyContainer.TryGetValue(parameterType, out var service))
+			// Then try to resolve from the dependency provider (LAZY - factory only runs if needed)
+			if (dependencyProvider.TryGetService(parameterType, out var service))
 			{
 				resolvedArgs[paramIndex] = service;
 				continue;

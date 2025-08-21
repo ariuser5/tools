@@ -1,6 +1,6 @@
-using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using DCiuve.Gcp.PubSub;
+using DCiuve.Gcp.ExtensionDomain.Gmail;
 
 namespace DCiuve.Gcp.Mailflow.Services;
 
@@ -16,14 +16,15 @@ public class GmailWatchBroker : IDisposable
     /// <summary>
     /// Initializes a new instance of the GmailWatchBroker class.
     /// </summary>
-    /// <param name="gmailService">The Gmail service instance.</param>
+    /// <param name="gmailClient">The Gmail client instance.</param>
     /// <param name="applicationName">The application name used for state management.</param>
-    public GmailWatchBroker(GmailService gmailService, string applicationName = "Gmail Client CLI")
+    public GmailWatchBroker(IGmailClient gmailClient, string? applicationName = null)
     {
+        var appName = applicationName ?? AppDomain.CurrentDomain.FriendlyName;
         _watchBrokerService = new GcpWatchBrokerService(
-            gmailService?.HttpClientInitializer ?? throw new ArgumentNullException(nameof(gmailService)), 
-            applicationName);
-        _stateManager = new WatchStateManager(applicationName);
+            gmailClient?.HttpClientInitializer ?? throw new ArgumentNullException(nameof(gmailClient)), 
+            appName);
+        _stateManager = new WatchStateManager(appName);
     }
     /// <summary>
     /// Sets up a Gmail push notification subscription using the PubSubPrimer library.
@@ -79,6 +80,7 @@ public class GmailWatchBroker : IDisposable
 
     /// <summary>
     /// Clears the Gmail watch state.
+    /// NOTE: Do not call this method while a watch is active.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task ClearWatchStateAsync()

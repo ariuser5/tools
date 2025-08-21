@@ -2,18 +2,19 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>11.0</LangVersion>
+    <RootNamespace>DCiuve.Gcp.Shared</RootNamespace>
+    <AssemblyName>GCP.Core.Shared</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>DCiuve.Gcp.ExtensionDomain</AssemblyName>
-    <RootNamespace>DCiuve.Gcp.ExtensionDomain</RootNamespace>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <Authors>DCiuve</Authors>
-    <Description>Domain interfaces and contracts for GCP extensions and services</Description>
+    <Description>Core shared utilities and abstractions for GCP applications</Description>
     <Version>1.0.0</Version>
   </PropertyGroup>
-
+  
   <ItemGroup>
-    <PackageReference Include="Google.Apis.Gmail.v1" Version="1.68.0.3509" />
+    <ProjectReference Include="..\..\GCP-ExtensionDomain\src\GCP.ExtensionDomain.csproj" />
   </ItemGroup>
 
 </Project>

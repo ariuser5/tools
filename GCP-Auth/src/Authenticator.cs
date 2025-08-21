@@ -7,7 +7,7 @@ namespace DCiuve.Gcp.Auth;
 public class Authenticator
 {
 	const string DefaultUser = "user";
-	const string DefaultCredentialsPath = "token";
+	const string DefaultCredentialsPath = "gcp_token";
 
 	public static async Task<UserCredential> Authenticate(
 		string secretJson,
