@@ -44,10 +44,11 @@ public class GmailWatchManager(
 	/// <param name="labelIds">Optional label IDs to filter emails.</param>
 	/// <param name="endTime">When to stop managing watches (null for indefinite).</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
-	public async Task StartWatchManagementAsync(
+    public async Task StartWatchManagementAsync(
         string topicName,
         string[]? labelIds = null,
         DateTime? endTime = null,
+        bool enforceOwnership = false,
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, nameof(GmailWatchManager));
@@ -56,7 +57,7 @@ public class GmailWatchManager(
 
         try
         {
-            await EnsureActiveWatchAsync(topicName, labelIds, endTime, cancellationToken);
+            await EnsureActiveWatchAsync(topicName, labelIds, endTime, enforceOwnership, cancellationToken);
             await ScheduleNextRenewalCheckAsync(topicName, labelIds, endTime, cancellationToken);
 
             // Handle duration-based or indefinite operation
@@ -139,6 +140,7 @@ public class GmailWatchManager(
         string topicName,
         string[]? labelIds,
         DateTime? endTime,
+        bool enforceOwnership,
         CancellationToken cancellationToken)
     {
         _logger.Debug("Checking for existing Gmail watch...");
@@ -148,10 +150,17 @@ public class GmailWatchManager(
         {
             _logger.Info("Active watch found (expires: {0:yyyy-MM-dd HH:mm:ss} UTC).", existingWatch.Expiration);
             _logger.Debug("Watch details - Watch ID: {0}, Topic: {1}", existingWatch.WatchId, existingWatch.TopicName);
-            
-            // We're using an existing watch, so we don't own it
-            _owningWatch = false;
-            _ownedWatchId = null;
+            if (enforceOwnership)
+            {
+                _logger.Debug("Enforcing ownership: taking ownership of existing watch.");
+                _owningWatch = true;
+                _ownedWatchId = existingWatch.WatchId;
+            }
+            else
+            {
+                _owningWatch = false;
+                _ownedWatchId = null;
+            }
 
             // Check if current watch will expire before our end time
             if (endTime.HasValue && existingWatch.Expiration < endTime.Value)
@@ -171,8 +180,7 @@ public class GmailWatchManager(
         {
             if (existingWatch != null)
             {
-                _logger.Info("Found expired watch (expired: {0:yyyy-MM-dd HH:mm:ss} UTC). Creating new watch...",
-                    existingWatch.Expiration);
+                _logger.Info("Found expired watch (expired: {0:yyyy-MM-dd HH:mm:ss} UTC). Creating new watch...", existingWatch.Expiration);
             }
             else
             {

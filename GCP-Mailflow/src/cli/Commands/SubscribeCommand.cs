@@ -15,14 +15,6 @@ public record SubscribeOptions : BaseOptions
     // common
     [Option('d', "duration", Required = false, HelpText = "Duration to run subscription (e.g., '1h', '30m', '2d'). Leave empty for indefinite.")]
     public string? Duration { get; set; }
-    
-    [Option('z', "pubsub-secret-path",
-		Required = false,
-		HelpText = "Path to Google credentials JSON file for Pub/Sub. " +
-			"If not provided, uses the same as --secret-path. " +
-            "This is required when the main user credential does not have access to Pub/Sub.")]
-	public string? PubsubSecretPath { get; set; }
-
 
     [Option("webhook", Required = false, HelpText = "Webhook URL for notifications.")]
     public string? WebhookUrl { get; set; }
@@ -43,8 +35,23 @@ public record SubscribeOptions : BaseOptions
     [Option('t', "topic", Required = false, HelpText = "Cloud Pub/Sub topic name for pull subscription mode.")]
     public string? TopicName { get; set; }
 
+    [Option('z', "pubsub-secret-path",
+        Required = false,
+        HelpText = "Path to Google credentials JSON file for Pub/Sub. " +
+            "If not provided, uses the same as --secret-path. " +
+            "This is required when the main user credential does not have access to Pub/Sub.")]
+    public string? PubsubSecretPath { get; set; }
+
     [Option("setup-watch", Required = false, Default = false, HelpText = "Setup Gmail watch request automatically (alternative to using PubSubPrimer).")]
     public bool SetupWatch { get; set; } = false;
+
+    [Option("enforce-watch-ownership",
+        Required = false,
+        Default = false,
+        HelpText = "Enforce ownership of the Gmail watch. " +
+            "Only applicable when using '--setup-watch' flag. " +
+            "This means that if the watch already exists, the watch will be stopped when the application stops.")]
+    public bool EnforceWatchOwnership { get; set; } = false;
     // ***
 }
 
@@ -171,9 +178,20 @@ public class SubscribeCommand(
             else
             {
                 if (options.SetupWatch)
+                {
                     logger.Info("Using automatic Gmail watch setup mode.");
+                }
                 else
+                {
                     logger.Info("Using pre-primed topic mode (requires PubSubPrimer setup).");
+
+                    // Warn about irrelevant parameters
+                    if (options.EnforceWatchOwnership)
+                    {
+                        logger.Warning("The --enforce-watch-ownership option is ignored when not using --setup-watch.");
+                        irrelevantParams.Add("--enforce-watch-ownership (only relevant with --setup-watch)");
+                    }
+                }
             }
 
             // Warn about polling-specific parameters that are irrelevant in pull mode
@@ -200,6 +218,11 @@ public class SubscribeCommand(
             if (options.SetupWatch)
             {
                 irrelevantParams.Add("--setup-watch (watch setup is not used in polling mode)");
+            }
+            
+            if (options.EnforceWatchOwnership)
+            {
+                irrelevantParams.Add("--enforce-watch-ownership (only relevant with --setup-watch)");
             }
 
             // PubSubSecretPath is only relevant for pull mode (Pub/Sub operations)

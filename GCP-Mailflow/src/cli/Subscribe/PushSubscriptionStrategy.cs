@@ -163,6 +163,7 @@ public class PullSubscriptionStrategy(
 				topicName: topicName,
 				labelIds: labelIds,
 				endTime: endTime,
+				enforceOwnership: options.EnforceWatchOwnership,
 				cancellationToken: cancellationToken);
 		}
 		catch (Exception ex)
