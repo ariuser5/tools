@@ -102,7 +102,7 @@ public class PullSubscriptionStrategy(
 			// Process messages from the pull subscription stream
 			await foreach (var message in messageStream.WithCancellation(cancellationToken))
 			{
-				logger.Debug("Inbound notification received at {0} - batchId '{1}'.", DateTime.UtcNow, message.BatchId);
+				logger.Debug("Inbound notification received at {0}; batchId='{1}'.", DateTime.UtcNow, message.BatchId);
 				await HandleInboundMessage(message, cancellationToken);
 			}
 		}
