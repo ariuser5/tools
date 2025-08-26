@@ -29,18 +29,18 @@ public record SubscribeOptions : BaseOptions
     // ***
 
     // polling specific
-    [Option('i', "interval", Required = false, Default = 30, HelpText = "Polling interval in seconds (when not using push notifications).")]
+    [Option('i', "interval", Required = false, Default = 30, HelpText = "Polling interval in seconds (when not using pull subscription mode).")]
     public int PollingInterval { get; set; } = 30;
     // ***
 
-    // push specific
-    [Option("push", Required = false, Default = false, HelpText = "Use push notifications instead of polling.")]
-    public bool UsePushNotifications { get; set; } = false;
+    // pull specific
+    [Option("pull", Required = false, Default = false, HelpText = "Use pull subscription mode (Pub/Sub) instead of polling.")]
+    public bool UsePullSubscription { get; set; } = false;
 
-    [Option('n', "subscription", Required = false, HelpText = "Name/ID for this subscription. Required for push notifications.")]
+    [Option('n', "subscription", Required = false, HelpText = "Name/ID for this subscription. Required for pull subscription mode.")]
     public string? Name { get; set; }
 
-    [Option('t', "topic", Required = false, HelpText = "Cloud Pub/Sub topic name for push notifications.")]
+    [Option('t', "topic", Required = false, HelpText = "Cloud Pub/Sub topic name for pull subscription mode.")]
     public string? TopicName { get; set; }
 
     [Option("setup-watch", Required = false, Default = false, HelpText = "Setup Gmail watch request automatically (alternative to using PubSubPrimer).")]
@@ -154,18 +154,18 @@ public class SubscribeCommand(
         var isValid = true;
         var irrelevantParams = new List<string>();
 
-        if (options.UsePushNotifications)
+        if (options.UsePullSubscription)
         {
-            // Push mode validation
+            // Pull mode validation
             if (string.IsNullOrWhiteSpace(options.Name))
             {
-                logger.Error("Name is required when using push notifications. Use --name option.");
+                logger.Error("Name is required when using pull subscription mode. Use --name option.");
                 isValid = false;
             }
             
             if (string.IsNullOrEmpty(options.TopicName))
             {
-                logger.Error("Topic name is required when using push notifications. Use --topic option.");
+                logger.Error("Topic name is required when using pull subscription mode. Use --topic option.");
                 isValid = false;
             }
             else
@@ -176,10 +176,10 @@ public class SubscribeCommand(
                     logger.Info("Using pre-primed topic mode (requires PubSubPrimer setup).");
             }
 
-            // Warn about polling-specific parameters that are irrelevant in push mode
+            // Warn about polling-specific parameters that are irrelevant in pull mode
             if (options.PollingInterval != 30) // 30 is the default
             {
-                irrelevantParams.Add("--interval (polling interval is not used in push mode)");
+                irrelevantParams.Add("--interval (polling interval is not used in pull mode)");
             }
         }
         else
@@ -191,7 +191,7 @@ public class SubscribeCommand(
                 isValid = false;
             }
 
-            // Warn about push-specific parameters that are irrelevant in polling mode
+            // Warn about pull-specific parameters that are irrelevant in polling mode
             if (!string.IsNullOrEmpty(options.TopicName))
             {
                 irrelevantParams.Add("--topic (topic name is not used in polling mode)");
@@ -202,7 +202,7 @@ public class SubscribeCommand(
                 irrelevantParams.Add("--setup-watch (watch setup is not used in polling mode)");
             }
 
-            // PubSubSecretPath is only relevant for push mode (Pub/Sub operations)
+            // PubSubSecretPath is only relevant for pull mode (Pub/Sub operations)
             if (!string.IsNullOrEmpty(options.PubsubSecretPath))
             {
                 irrelevantParams.Add("--pubsub-secret-path (Pub/Sub credentials are not used in polling mode)");
@@ -212,7 +212,7 @@ public class SubscribeCommand(
         // Log warnings for irrelevant parameters
         if (irrelevantParams.Count > 0)
         {
-            var mode = options.UsePushNotifications ? "push" : "polling";
+            var mode = options.UsePullSubscription ? "pull" : "polling";
             logger.Warning($"The following parameters are not relevant for {mode} mode and will be ignored:");
             foreach (var param in irrelevantParams)
             {

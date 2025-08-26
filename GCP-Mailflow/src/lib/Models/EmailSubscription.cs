@@ -11,7 +11,7 @@ public record EmailSubscription
     public string Name { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the Cloud Pub/Sub topic name for push notifications.
+    /// Gets or sets the Cloud Pub/Sub topic name for pull/push notifications.
     /// </summary>
     public string TopicName { get; init; } = string.Empty;
 

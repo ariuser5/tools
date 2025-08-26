@@ -33,13 +33,13 @@ Command-line tool for Gmail management with email fetching and real-time monitor
 
 ### Monitor Emails
 
-**Push Notifications (Recommended):**
+**Pull Subscription Mode (Recommended):**
 ```powershell
 # First, setup Gmail watch (one-time)
 .\psub.exe watch gmail --project-id "your-project" --topic-id "gmail-notifications"
 
-# Then monitor
-.\mailflow.exe subscribe --name "monitor" --push --topic "projects/your-project/topics/gmail-notifications"
+# Then monitor (pulls messages from Pub/Sub)
+.\mailflow.exe subscribe --name "monitor" --pull --topic "projects/your-project/topics/gmail-notifications"
 ```
 
 **Polling Mode:**
@@ -58,8 +58,8 @@ Command-line tool for Gmail management with email fetching and real-time monitor
 
 ### Subscribe Options
 - `--name "id"` - Subscription name (required)
-- `--push` - Use push notifications
-- `--topic "projects/..."` - Pub/Sub topic for push
+- `--pull` - Use pull subscription mode (Pub/Sub)
+- `--topic "projects/..."` - Pub/Sub topic for pull
 - `--interval N` - Polling seconds (default: 30)
 - `--duration "1h"` - Run time limit
 
@@ -72,6 +72,6 @@ Command-line tool for Gmail management with email fetching and real-time monitor
 # Export unread emails to JSON
 .\mailflow.exe fetch --unread --output json > emails.json
 
-# Monitor specific sender with push notifications
-.\mailflow.exe subscribe --name "alerts" --from "alerts@company.com" --push
+# Monitor specific sender with pull subscription
+.\mailflow.exe subscribe --name "alerts" --from "alerts@company.com" --pull
 ```

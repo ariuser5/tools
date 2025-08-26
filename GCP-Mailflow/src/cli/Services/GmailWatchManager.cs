@@ -95,7 +95,7 @@ public class GmailWatchManager(
             _logger.Debug("Cancelling Gmail watch since we own it...");
             try
             {
-                var stopped = await _watchBroker.StopPushNotificationsAsync();
+                var stopped = await _watchBroker.StopPullNotificationsAsync();
                 if (stopped)
                 {
                     await _watchBroker.ClearWatchStateAsync();

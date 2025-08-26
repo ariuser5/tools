@@ -27,7 +27,7 @@ public class GmailWatchBroker : IDisposable
         _stateManager = new WatchStateManager(appName);
     }
     /// <summary>
-    /// Sets up a Gmail push notification subscription using the PubSubPrimer library.
+    /// Sets up a Gmail pull/push notification subscription using the PubSubPrimer library.
     /// </summary>
     /// <param name="topicName">The Pub/Sub topic name.</param>
     /// <param name="labelIds">Optional label IDs to filter messages.</param>
@@ -45,11 +45,11 @@ public class GmailWatchBroker : IDisposable
     }
 
     /// <summary>
-    /// Stops the Gmail push notification subscription using the PubSubPrimer library.
+    /// Stops the Gmail pul/push notification subscription using the PubSubPrimer library.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the watch was successfully stopped; otherwise, false.</returns>
-    public async Task<bool> StopPushNotificationsAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> StopPullNotificationsAsync(CancellationToken cancellationToken = default)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(GmailWatchBroker));
         

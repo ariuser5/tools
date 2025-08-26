@@ -83,13 +83,13 @@
             "stopAtEntry": false,
         },
         {
-            "name": "Debug Mailflow - Push for a short duration",
+            "name": "Debug Mailflow - Pull for a short duration",
             "type": "coreclr",
             "request": "launch",
             "program": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0/mailflow.exe",
             "args": [
-                "subscribe", "--push",
-                "--application-name", "My-Push-Gmail-Demo",
+                "subscribe", "--pull",
+                "--application-name", "My-Pull-Gmail-Demo",
                 "--subscription", "gmailToTask-sub",
                 "--topic", "projects/smart-home-409915/topics/gmailToTask",
                 "--labels", "INBOX",

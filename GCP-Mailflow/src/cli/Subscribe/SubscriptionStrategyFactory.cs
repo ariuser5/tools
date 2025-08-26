@@ -11,19 +11,20 @@ public class SubscriptionStrategyFactory(
 	IGmailClient gmailClient,
 	Lazy<ICredential> pubsubAccessCredential)
 {
+
 	public ISubscriptionStrategy CreateStrategy(SubscribeOptions options)
 	{
-		return options.UsePushNotifications switch
+		return options.UsePullSubscription switch
 		{
-			true => CreatePushStrategy(options),
+			true => CreatePullStrategy(options),
 			false => CreatePollingStrategy(options),
 		};
 	}
 
-	private PushSubscriptionStrategy CreatePushStrategy(SubscribeOptions options)
+	private PullSubscriptionStrategy CreatePullStrategy(SubscribeOptions options)
 	{
 		var emailSubscriber = new EmailSubscriber(gmailClient, pubsubAccessCredential.Value);
-		return new PushSubscriptionStrategy(logger, options, emailSubscriber, gmailClient);
+		return new PullSubscriptionStrategy(logger, options, emailSubscriber, gmailClient);
 	}
 
 	private PollingSubscriptionStrategy CreatePollingStrategy(SubscribeOptions options)

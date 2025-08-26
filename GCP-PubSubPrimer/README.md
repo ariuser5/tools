@@ -1,10 +1,10 @@
 # GCP-PubSubPrimer (`psub`)
 
-Sets up Gmail watch requests for push notifications.
+Sets up Gmail watch requests for pull/push notifications.
 
 ## Purpose
 
-Creates Gmail watches that send notifications to Pub/Sub topics. This is required before using push notifications in other tools.
+Creates Gmail watches that send notifications to Pub/Sub topics. This is required before using pull/push notifications in other tools.
 
 ## Usage
 
@@ -45,5 +45,5 @@ $env:GCP_PUBSUB_TOPICID = "gmail-notifications"
 
 2. **Use in other tools**:
    ```powershell
-   .\mailflow.exe subscribe --push --topic "projects/my-project/topics/gmail-notifications"
+   .\mailflow.exe subscribe --pull --topic "projects/my-project/topics/gmail-notifications"
    ```

@@ -12,8 +12,8 @@ using historyTypes = Google.Apis.Gmail.v1.UsersResource.HistoryResource.ListRequ
 namespace DCiuve.Gcp.Mailflow.Services;
 
 /// <summary>
-/// Service for managing push notification subscriptions via Pub/Sub.
-/// This class handles receiving and processing Gmail push notifications.
+/// Service for managing pull subscriptions via Pub/Sub.
+/// This class handles receiving and processing Gmail Pub/Sub pull messages.
 /// </summary>
 public class EmailSubscriber : IDisposable
 {
@@ -35,7 +35,7 @@ public class EmailSubscriber : IDisposable
     }
 
     /// <summary>
-    /// Starts listening for push notifications from Pub/Sub.
+    /// Starts listening for pull subscription messages from Pub/Sub.
     /// Note: Requires that the Gmail watch has been set up via GmailWatchBroker first.
     /// This method does NOT create a new Gmail watch request - it assumes one already exists.
     /// </summary>
@@ -43,8 +43,8 @@ public class EmailSubscriber : IDisposable
     /// <param name="subscriptionId">The Pub/Sub subscription ID.</param>
     /// <param name="filter">The subscription configuration.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>An async enumerable of individual emails received via push notifications.</returns>
-    public async IAsyncEnumerable<InboundMessage> StartPushNotificationListenerAsync(
+    /// <returns>An async enumerable of individual emails received via pull subscription.</returns>
+    public async IAsyncEnumerable<InboundMessage> StartPullSubscriptionListenerAsync(
         string projectId,
         string subscriptionId,
         EmailFilter filter,
@@ -91,7 +91,7 @@ public class EmailSubscriber : IDisposable
 
         try
         {
-            var processingMessages = ProcessPushNotificationAsync(sessionRef, batchToken, message, filter, cancellationToken);
+            var processingMessages = ProcessNotificationAsync(sessionRef, batchToken, message, filter, cancellationToken);
 
             await foreach (var processingTask in processingMessages)
             {
@@ -109,7 +109,7 @@ public class EmailSubscriber : IDisposable
         return SubscriberClient.Reply.Ack;
     }
 
-    private async IAsyncEnumerable<InboundMessage> ProcessPushNotificationAsync(
+    private async IAsyncEnumerable<InboundMessage> ProcessNotificationAsync(
         SessionStateRef sessionRef,
         BatchToken batchToken,
         PubsubMessage message,
@@ -131,7 +131,7 @@ public class EmailSubscriber : IDisposable
         var decodedBase64Content = Convert.FromBase64String(notificationData);
         var decodedData = System.Text.Encoding.UTF8.GetString(decodedBase64Content);
 
-        // Parse the JSON notification (Gmail push notification format):
+        // Parse the JSON notification (Gmail pull notification format):
         // { "emailAddress": "user@example.com", "historyId": "123456" }
         using var jsonDoc = JsonDocument.Parse(decodedData);
 
@@ -235,7 +235,7 @@ public class EmailSubscriber : IDisposable
     }
 
     /// <summary>
-    /// Stops the push notification listener.
+    /// Stops the pull notification listener.
     /// </summary>
     public void Stop()
     {

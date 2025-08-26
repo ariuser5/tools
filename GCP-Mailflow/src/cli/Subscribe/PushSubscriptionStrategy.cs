@@ -7,7 +7,7 @@ using DCiuve.Shared.Logging;
 
 namespace DCiuve.Gcp.Mailflow.Cli.Subscribe;
 
-public class PushSubscriptionStrategy(
+public class PullSubscriptionStrategy(
 	ILogger logger,
 	SubscribeOptions options,
 	EmailSubscriber emailSubscriber,
@@ -20,8 +20,8 @@ public class PushSubscriptionStrategy(
 
 	public async Task<int> ExecuteAsync(EmailSubscription subscription, CancellationToken cancellationToken)
 	{
-		logger.Info("Starting push notification-based email monitoring...");
-		logger.Info($"Subscription ID: {subscription.Name}");
+	logger.Info("Starting pull subscription-based email monitoring...");
+	logger.Info($"Subscription ID: {subscription.Name}");
 
 		if (!options.SetupWatch)
 		{
@@ -78,8 +78,8 @@ public class PushSubscriptionStrategy(
     }
 
 	/// <summary>
-	/// Starts email monitoring using push notifications via EmailSubscriber.
-	/// This method sets up real push notification handling instead of polling.
+	/// Starts email monitoring using pull subscription via EmailSubscriber.
+	/// This method sets up real pull subscription handling instead of polling.
 	/// </summary>
 	/// <param name="subscription">The subscription configuration.</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
@@ -87,36 +87,36 @@ public class PushSubscriptionStrategy(
 		EmailSubscription subscription,
 		CancellationToken cancellationToken)
 	{
-		logger.Info("Starting email monitoring (push notification mode)...");
+	logger.Info("Starting email monitoring (pull subscription mode)...");
 
 		try
 		{
-			// Start the push notification listener
+			// Start the pull subscription listener
 			var (projectId, topicId) = DecomposeTopicName(subscription.TopicName);
 
-			var messageStream = emailSubscriber.StartPushNotificationListenerAsync(
+			var messageStream = emailSubscriber.StartPullSubscriptionListenerAsync(
 				projectId, subscription.Name, subscription.Filter, cancellationToken);
 
-			logger.Info("Push notification listener started successfully");
+			logger.Info("Pull subscription listener started successfully");
 
-			// Process messages from the push notification stream
+			// Process messages from the pull subscription stream
 			await foreach (var message in messageStream.WithCancellation(cancellationToken))
 			{
-				logger.Debug("Inbound notification received at {0}.", DateTime.UtcNow);
+				logger.Debug("Inbound notification received at {0} - batchId '{1}'.", DateTime.UtcNow, message.BatchId);
 				await HandleInboundMessage(message, cancellationToken);
 			}
 		}
 		finally
 		{
-			// Stop the push notification listener
+			// Stop the pull subscription listener
 			try
 			{
 				emailSubscriber.Stop();
-				logger.Info("Push notification listener stopped.");
+				logger.Info("Pull subscription listener stopped.");
 			}
 			catch (Exception ex)
 			{
-				logger.Warning($"Error stopping push notification listener: {ex.Message}");
+				logger.Warning($"Error stopping pull subscription listener: {ex.Message}");
 			}
 		}
 	}

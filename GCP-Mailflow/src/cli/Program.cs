@@ -66,7 +66,7 @@ static async Task<int> HandleSubscribeCommandAsync(
     Lazy<ICredential>? pubsubCredential = null;
     try
     {
-        string[] requiredScopes = options.UsePushNotifications && options.PubsubSecretPath == null
+        string[] requiredScopes = options.UsePullSubscription && options.PubsubSecretPath == null
             ? [GmailService.Scope.GmailReadonly, .. SubscriberServiceApiClient.DefaultScopes]
             : [GmailService.Scope.GmailReadonly];
 
@@ -75,7 +75,7 @@ static async Task<int> HandleSubscribeCommandAsync(
         gmailClient = CreateGmailClient(logger, credential);
         pubsubCredential = new(() => credential);
     }
-    catch (Exception ex) when (options.UsePushNotifications && options.PubsubSecretPath != null)
+    catch (Exception ex) when (options.UsePullSubscription && options.PubsubSecretPath != null)
     {
         logger.Warning("Failed to create Gmail client. " +
             "Process will continue but will not have email access.");
@@ -87,7 +87,7 @@ static async Task<int> HandleSubscribeCommandAsync(
 
     using var _ = gmailClient;;
 
-    if (options.UsePushNotifications && options.PubsubSecretPath != null)
+    if (options.UsePullSubscription && options.PubsubSecretPath != null)
     {
         var pubsubAuth = GoogleCredential.FromFile(options.PubsubSecretPath)
             .CreateScoped(SubscriberServiceApiClient.DefaultScopes);
