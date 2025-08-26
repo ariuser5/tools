@@ -7,6 +7,7 @@ public class Application : IDependencyProvider
 {
 	private readonly Dictionary<Type, object> _instances = new();
 	private readonly Dictionary<Type, Func<IDependencyProvider, object>> _factories = new();
+	private readonly Dictionary<Type, object> _preExecutionCache = new(); // Cache for factory-resolved services
 
 	/// <summary>
 	/// Creates a new Application instance with basic pre-registered dependencies.
@@ -118,40 +119,62 @@ public class Application : IDependencyProvider
 	}
 
 	/// <summary>
-	/// Gets a registered dependency of the specified type.
-	/// Only returns directly registered instances (not factory-created dependencies).
-	/// Factory-created dependencies are only resolved during Run() execution for thread safety.
+	/// Gets a registered dependency of the specified type.<br/>
+	/// <br/>
+	/// ENHANCED BEHAVIOR (now matching ASP.NET Core patterns):<br/>
+	/// - Direct instances: Returns immediately if registered as instance<br/>
+	/// - Factory services: Executes factory on first access and caches result<br/>
+	/// - Cached results persist until the next Run() method completes<br/>
+	/// - Thread-safe: Multiple calls return same cached instance within execution scope<br/>
+	/// - Can resolve dependencies outside of Run() execution context<br/>
+	/// <br/>
+	/// This allows accessing factory-registered dependencies before Run() is called,
+	/// making the behavior consistent with ASP.NET Core's service resolution.
 	/// </summary>
 	/// <typeparam name="T">The dependency type</typeparam>
-	/// <returns>The dependency instance if directly registered</returns>
-	/// <exception cref="InvalidOperationException">Thrown when the dependency is not registered or is factory-registered</exception>
+	/// <returns>The dependency instance</returns>
+	/// <exception cref="InvalidOperationException">Thrown when the dependency is not registered</exception>
 	public T GetDependency<T>() where T : class
 	{
-		// Only return directly registered instances, not factory-created ones
+		// First try directly registered instances
 		if (_instances.TryGetValue(typeof(T), out var service))
 			return (T)service;
 
-		throw new InvalidOperationException($"Dependency of type '{typeof(T).Name}' is not registered as a direct instance. Use TryGetDependency for safe access or ensure the dependency is registered with RegisterDependency(instance).");
+		// Then try pre-execution cache (previously resolved factories)
+		if (_preExecutionCache.TryGetValue(typeof(T), out var cachedService))
+			return (T)cachedService;
+
+		// Finally try to resolve from factory
+		if (_factories.TryGetValue(typeof(T), out var factory))
+		{
+			var resolvedService = factory(this);
+			_preExecutionCache[typeof(T)] = resolvedService; // Cache for future use
+			return (T)resolvedService;
+		}
+
+		throw new InvalidOperationException($"Dependency of type '{typeof(T).Name}' is not registered.");
 	}
 
 	/// <summary>
 	/// Tries to get a registered dependency of the specified type.
-	/// Only returns directly registered instances (not factory-created dependencies).
-	/// Factory-created dependencies are only resolved during Run() execution for thread safety.
+	/// Returns directly registered instances or resolves factory-registered dependencies.
+	/// Factory-resolved services are cached and reused in subsequent Run() executions.
 	/// </summary>
 	/// <typeparam name="T">The dependency type</typeparam>
 	/// <param name="dependency">The retrieved dependency, or null if not found</param>
-	/// <returns>True if the dependency was found and is directly registered, false otherwise</returns>
+	/// <returns>True if the dependency was found, false otherwise</returns>
 	public bool TryGetDependency<T>([NotNullWhen(true)] out T? dependency) where T : class
 	{
-		if (_instances.TryGetValue(typeof(T), out var service))
+		try
 		{
-			dependency = (T)service;
+			dependency = GetDependency<T>();
 			return true;
 		}
-
-		dependency = null;
-		return false;
+		catch (InvalidOperationException)
+		{
+			dependency = null;
+			return false;
+		}
 	}
 
 	/// <summary>
@@ -164,18 +187,9 @@ public class Application : IDependencyProvider
 	/// <returns>Exit code (0 for success, 1 for error)</returns>
 	public int Run(Delegate method, params object[] additionalArgs)
 	{
-		try
-		{
-			var resolvedArgs = ResolveDependencies(method, additionalArgs);
-			var result = method.DynamicInvoke(resolvedArgs);
-			
-			return ProcessResult(result);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error: {ex.Message}");
-			return 1;
-		}
+		var resolvedArgs = ResolveDependencies(method, additionalArgs);
+		var result = method.DynamicInvoke(resolvedArgs);
+		return ProcessResult(result);
 	}
 
 	/// <summary>
@@ -188,22 +202,14 @@ public class Application : IDependencyProvider
 	/// <returns>Task that returns exit code (0 for success, 1 for error)</returns>
 	public async Task<int> RunAsync(Delegate method, params object[] additionalArgs)
 	{
-		try
-		{
-			var resolvedArgs = ResolveDependencies(method, additionalArgs);
-			var result = method.DynamicInvoke(resolvedArgs);
-			
-			return await ProcessResultAsync(result);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error: {ex.Message}");
-			return 1;
-		}
+		var resolvedArgs = ResolveDependencies(method, additionalArgs);
+		var result = method.DynamicInvoke(resolvedArgs);
+		return await ProcessResultAsync(result);
 	}
 
 	/// <summary>
 	/// Prepares the execution by setting up the dependency container and resolving method parameters.
+	/// Merges pre-execution cache (from GetDependency calls) into the execution container.
 	/// </summary>
 	/// <param name="method">The method to prepare for execution</param>
 	/// <param name="additionalArgs">Additional arguments to resolve against method parameters</param>
@@ -219,11 +225,21 @@ public class Application : IDependencyProvider
 			dependencyContainer[key] = value;
 		}
 		
-		// Then resolve all factories with a proper dependency provider
-		var dependencyProvider = new ExecutionDependencyProvider(dependencyContainer, _factories);
-		ResolveAllFactories(dependencyProvider, dependencyContainer, additionalArgs);
+		// Then, merge pre-execution cache (services resolved via GetDependency calls)
+		foreach (var (key, value) in _preExecutionCache)
+		{
+			dependencyContainer[key] = value;
+		}
 		
-		return ResolveMethodParameters(method, additionalArgs, dependencyContainer);
+		// Create a lazy dependency provider for any additional factory resolution
+		var dependencyProvider = new LazyExecutionDependencyProvider(dependencyContainer, _factories, additionalArgs);
+		
+		var result = ResolveMethodParameters(method, additionalArgs, dependencyProvider);
+		
+		// Reset the pre-execution cache after Run() completes
+		_preExecutionCache.Clear();
+		
+		return result;
 	}
 
 	/// <summary>
@@ -272,33 +288,13 @@ public class Application : IDependencyProvider
 	}
 
 	/// <summary>
-	/// Resolves all registered factories to ensure all dependencies are instantiated.
-	/// </summary>
-	private void ResolveAllFactories(IDependencyProvider provider, Dictionary<Type, object> container, object[] additionalArgs)
-	{
-		// Create a copy of factory entries to avoid modification during iteration
-		var factoriesToResolve = _factories.ToArray();
-
-		foreach (var kvp in factoriesToResolve)
-		{
-			var type = kvp.Key;
-			var factory = kvp.Value;
-
-			// Only resolve if not already instantiated
-			if (!container.ContainsKey(type))
-			{
-				// Create an enhanced provider that can resolve from both container and additional args
-				var enhancedProvider = new EnhancedExecutionDependencyProvider(container, _factories, additionalArgs);
-				var instance = factory(enhancedProvider) ?? throw new InvalidOperationException($"Factory for type {type.Name} returned null");
-				container[type] = instance;
-			}
-		}
-	}
-
-	/// <summary>
 	/// Resolves method parameters by matching types from registered services and additional arguments.
+	/// Uses lazy resolution - factories are only called when their services are actually needed.
 	/// </summary>
-	private static object?[] ResolveMethodParameters(Delegate method, object[] additionalArgs, Dictionary<Type, object> dependencyContainer)
+	/// Resolves method parameters by matching types from registered services and additional arguments.
+	/// Uses lazy resolution - factories are only called when their services are actually needed.
+	/// </summary>
+	private static object?[] ResolveMethodParameters(Delegate method, object[] additionalArgs, LazyExecutionDependencyProvider dependencyProvider)
 	{
 		var methodInfo = method.Method;
 		var parameters = methodInfo.GetParameters();
@@ -340,8 +336,8 @@ public class Application : IDependencyProvider
 				continue;
 			}
 			
-			// Then try to resolve from the dependency container
-			if (dependencyContainer.TryGetValue(parameterType, out var service))
+			// Then try to resolve from the dependency provider (LAZY - factory only runs if needed)
+			if (dependencyProvider.TryGetService(parameterType, out var service))
 			{
 				resolvedArgs[paramIndex] = service;
 				continue;

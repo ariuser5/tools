@@ -3,7 +3,7 @@ namespace DCiuve.Gcp.Mailflow.Models;
 /// <summary>
 /// Represents an email subscription configuration.
 /// </summary>
-public record EmailSubscriptionParams
+public record EmailSubscription
 {
     /// <summary>
     /// Gets or sets the subscription name/identifier.
@@ -18,7 +18,7 @@ public record EmailSubscriptionParams
     /// <summary>
     /// Gets or sets the filter to apply to the subscription.
     /// </summary>
-    public EmailFilter Filter { get; init; } = new();
+    public EmailFilter Filter { get; init; } = EmailFilter.Default;
 
     /// <summary>
     /// Gets or sets the callback URL for webhook notifications.
@@ -39,9 +39,4 @@ public record EmailSubscriptionParams
     /// Gets or sets the creation timestamp.
     /// </summary>
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Gets or sets the last updated timestamp.
-    /// </summary>
-    public DateTime LastUpdated { get; init; } = DateTime.UtcNow;
 }

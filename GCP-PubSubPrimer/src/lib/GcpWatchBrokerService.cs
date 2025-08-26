@@ -40,7 +40,7 @@ public class GcpWatchBrokerService : IGcpExtensionService, IDisposable
     /// Creates or retrieves a Gmail watch for inbox notifications.
     /// </summary>
     /// <param name="topicName">The Pub/Sub topic to publish notifications to.</param>
-    /// <param name="labelIds">Optional label IDs to filter messages. Default is ["INBOX"].</param>
+    /// <param name="labelIds">Optional label IDs to filter messages.</param>
     /// <param name="forceNew">If true, creates a new watch even if one exists.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Watch result with Gmail watch response and cancel action.</returns>
@@ -81,10 +81,10 @@ public class GcpWatchBrokerService : IGcpExtensionService, IDisposable
         var gmailService = GetOrCreateGmailService();
         var watchRequest = new WatchRequest
         {
-            LabelFilterAction = "include",
+            LabelFilterBehavior = "include",
             TopicName = topicName,
-            LabelIds = labelIds ?? new[] { "INBOX" }
-        };
+            LabelIds = labelIds ?? Array.Empty<string>()
+		};
 
         var request = gmailService.Users.Watch(watchRequest, "me");
         var response = await request.ExecuteAsync(cancellationToken);

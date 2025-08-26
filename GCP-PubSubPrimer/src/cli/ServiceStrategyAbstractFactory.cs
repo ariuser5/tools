@@ -1,14 +1,14 @@
-using DCiuve.Gcp.Auth;
+using DCiuve.Gcp.App.Shared.Authentication;
 using DCiuve.Gcp.ExtensionDomain;
 using DCiuve.Gcp.PubSub.Cli.Gmail;
+using DCiuve.Gcp.Shared.Authentication;
 using DCiuve.Shared.Logging;
-using Google.Apis.Http;
 
 namespace DCiuve.Gcp.PubSub.Cli;
 
 /// <summary>
 /// Main abstract factory that orchestrates the complete flow:
-/// scope normalization → authentication → authenticated strategy creation.
+/// scope normalization → deferred authentication setup → authenticated strategy creation.
 /// </summary>
 public class ServiceStrategyAbstractFactory : IServiceStrategyAbstractFactory
 {
@@ -36,15 +36,19 @@ public class ServiceStrategyAbstractFactory : IServiceStrategyAbstractFactory
 			throw new ArgumentException($"Unsupported service: {serviceName}", nameof(serviceName));
 
 		_logger.Debug("Creating {0} strategy...", serviceName);
-
-		var strategy = concreteFactory.CreateStrategy(
-			gcpClientInitializer: new DeferredAuthentication(
-				_logger,
-				concreteFactory,
-				clientSecretStream,
-				customScopes,
-				cancellationToken),
-			applicationName);
+		
+		var normalizedScopes = concreteFactory.NormalizeScopes(customScopes);
+		var credentialSource = new CredentialSourceBuilder()
+			.WithClientSecretStream(clientSecretStream)
+			.WithScopes(normalizedScopes)
+			.Build();
+		
+		var gcpClientInitializer = new DeferredAuthentication(credentialSource, cancellationToken)
+		{
+			Logger = _logger
+		};
+		
+		var strategy = concreteFactory.CreateStrategy(gcpClientInitializer, applicationName);
 
 		_logger.Debug("Strategy '{0}' created successfully.", serviceName);
 		return Task.FromResult(strategy);
@@ -53,35 +57,5 @@ public class ServiceStrategyAbstractFactory : IServiceStrategyAbstractFactory
 	public string[] GetAvailableServices()
 	{
 		return [.. _concreteFactories.Keys];
-	}
-}
-
-class DeferredAuthentication(
-	ILogger logger,
-	IServiceConcreteFactory concreteFactory,
-	Stream clientSecretStream,
-	string[]? customScopes,
-	CancellationToken cancellationToken
-) : IConfigurableHttpClientInitializer
-{
-	public void Initialize(ConfigurableHttpClient httpClient)
-	{
-		logger.Debug("Begin Google Authentication...");
-
-		var normalizedScopes = concreteFactory.NormalizeScopes(customScopes);
-		logger.Debug("Using scopes for {0}: {1}", concreteFactory.ServiceName, string.Join(", ", normalizedScopes));
-
-		logger.Debug("Authenticating with Google credentials...");
-		var authentication = Authenticator.Authenticate(
-			clientSecretStream,
-			normalizedScopes,
-			cancellationToken: cancellationToken
-		).GetAwaiter().GetResult();
-
-		cancellationToken.ThrowIfCancellationRequested();
-			
-		logger.Debug("Authentication successful.");
-
-		authentication.Initialize(httpClient);
 	}
 }

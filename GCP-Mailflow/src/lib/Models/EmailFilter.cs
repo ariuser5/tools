@@ -5,6 +5,14 @@ namespace DCiuve.Gcp.Mailflow.Models;
 /// </summary>
 public record EmailFilter
 {
+    public static readonly EmailFilter Default = new()
+    {
+        MaxResults = 10,
+        IncludeSpamTrash = false,
+        UnreadOnly = false,
+        LabelIds = new List<string>()
+    };
+    
     /// <summary>
     /// Gets or sets the Gmail query string.
     /// </summary>
@@ -23,7 +31,7 @@ public record EmailFilter
     /// <summary>
     /// Gets or sets the label IDs to filter by.
     /// </summary>
-    public List<string> LabelIds { get; set; } = new();
+    public IList<string> LabelIds { get; set; } = new List<string>();
 
     /// <summary>
     /// Gets or sets the page token for pagination.

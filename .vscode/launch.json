@@ -89,10 +89,11 @@
             "program": "${workspaceFolder}/GCP-Mailflow/src/cli/bin/Debug/net9.0/mailflow.exe",
             "args": [
                 "subscribe", "--push",
-                "--name", "My-Push-Gmail-Demo",
+                "--application-name", "My-Push-Gmail-Demo",
+                "--subscription", "gmailToTask-sub",
                 "--topic", "projects/smart-home-409915/topics/gmailToTask",
                 "--labels", "INBOX",
-                "--duration", "60s",
+                "--duration", "10m",
                 "--setup-watch",
                 "-v", "4"
             ],

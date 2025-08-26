@@ -1,0 +1,8 @@
+- Update naming for the subscribe "push" command. It should be "pull" instead.
+- Create a "push" (real) subscription mode.
+- Fix PubSubPrimer project throughout the last few git commits.
+- Update Readme files
+- Extract whole GCP into a separate repository
+  OR - put all GCP in a folder
+- Create BaseOptions for GCP authentication and EmailFiltering
+- Update logging options to allow flag counter (-v, -vv, -vvv)

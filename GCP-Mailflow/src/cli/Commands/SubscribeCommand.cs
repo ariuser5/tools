@@ -1,9 +1,7 @@
 using CommandLine;
-using DCiuve.Gcp.Mailflow.Cli.Services;
+using DCiuve.Gcp.Mailflow.Cli.Subscribe;
 using DCiuve.Gcp.Mailflow.Models;
-using DCiuve.Gcp.Mailflow.Services;
 using DCiuve.Shared.Logging;
-using Google.Apis.Gmail.v1;
 using System.Text.RegularExpressions;
 
 namespace DCiuve.Gcp.Mailflow.Cli.Commands;
@@ -14,9 +12,17 @@ namespace DCiuve.Gcp.Mailflow.Cli.Commands;
 [Verb("subscribe", HelpText = "Subscribe to email notifications and monitor for new emails. The --query and individual filter flags can be combined for comprehensive filtering.")]
 public record SubscribeOptions : BaseOptions
 {
-    // poll/push common
+    // common
     [Option('d', "duration", Required = false, HelpText = "Duration to run subscription (e.g., '1h', '30m', '2d'). Leave empty for indefinite.")]
     public string? Duration { get; set; }
+    
+    [Option('z', "pubsub-secret-path",
+		Required = false,
+		HelpText = "Path to Google credentials JSON file for Pub/Sub. " +
+			"If not provided, uses the same as --secret-path. " +
+            "This is required when the main user credential does not have access to Pub/Sub.")]
+	public string? PubsubSecretPath { get; set; }
+
 
     [Option("webhook", Required = false, HelpText = "Webhook URL for notifications.")]
     public string? WebhookUrl { get; set; }
@@ -31,7 +37,7 @@ public record SubscribeOptions : BaseOptions
     [Option("push", Required = false, Default = false, HelpText = "Use push notifications instead of polling.")]
     public bool UsePushNotifications { get; set; } = false;
 
-    [Option('n', "name", Required = false, HelpText = "Name/ID for this subscription. If not provided, a unique ID will be auto-generated.")]
+    [Option('n', "subscription", Required = false, HelpText = "Name/ID for this subscription. Required for push notifications.")]
     public string? Name { get; set; }
 
     [Option('t', "topic", Required = false, HelpText = "Cloud Pub/Sub topic name for push notifications.")]
@@ -44,10 +50,8 @@ public record SubscribeOptions : BaseOptions
 
 
 public class SubscribeCommand(
-    EmailSubscriber emailSubscriber,
-    EmailPoller emailPoller,
-    GmailService gmailService,
-    ILogger logger)
+    ILogger logger,
+    ISubscriptionStrategy subscriptionStrategy)
 {
     /// <summary>
     /// Executes the subscribe command.
@@ -57,45 +61,60 @@ public class SubscribeCommand(
     /// <returns>The exit code.</returns>
     public async Task<int> ExecuteAsync(SubscribeOptions options, CancellationToken cancellationToken = default)
     {
-        try
+        logger.Info("Starting email subscription...");
+
+        // Validate options and warn about irrelevant parameters
+        if (!ValidateOptions(options)) return 1;
+
+        var subscription = BuildEmailSubscription(options);
+
+        using var durationCts = new CancellationTokenSource();
+        if (subscription.EndTime.HasValue)
         {
-            logger.Info("Starting email subscription...");
-
-            // Validate options and warn about irrelevant parameters
-            if (!ValidateOptions(options))
+            var remainingTime = subscription.EndTime.Value - DateTime.UtcNow;
+            if (remainingTime > TimeSpan.Zero)
             {
-                return 1;
-            }
-
-            // Calculate duration if specified
-            var duration = ParseDuration(options.Duration);
-            var endTime = duration.HasValue ? DateTime.UtcNow.Add(duration.Value) : (DateTime?)null;
-
-            var subscription = BuildEmailSubscription(options, endTime);
-            logger.Info($"Subscription ID: {subscription.Name}");
-
-            if (options.UsePushNotifications && !string.IsNullOrEmpty(options.TopicName))
-            {
-                await SetupPushNotificationsAsync(subscription, options, cancellationToken);
+                durationCts.CancelAfter(remainingTime);
+                durationCts.Token.Register(() => logger.Info("Subscription duration ended."));
+                logger.Info("Subscriber will stop at: {0:yyyy-MM-dd HH:mm:ss}", subscription.EndTime.Value);
             }
             else
             {
-                await StartPollingAsync(subscription, options, cancellationToken);
+                logger.Warning("End time has already passed.");
+                return 0;
             }
+        }
+        else
+        {
+            logger.Info("Subscriber will run indefinitely. Press Ctrl+C to stop.");
+        }
 
+        using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, durationCts.Token);
+
+        subscriptionStrategy.OutputAction = (emails, ct) => OutputEmailsAsync(emails, options, ct);
+
+        try
+        {
+            await subscriptionStrategy.ExecuteAsync(subscription, combinedCts.Token);
             logger.Info("Email subscription completed.");
             return 0;
         }
         catch (OperationCanceledException)
         {
-            logger.Info("Email subscription cancelled by user.");
+            if (cancellationToken.IsCancellationRequested)
+                logger.Debug("Email subscription cancelled by user.");
+            else if (durationCts.IsCancellationRequested)
+                logger.Debug("Email subscription cancelled due to duration end.");
+
             return 0;
         }
         catch (Exception ex)
         {
             logger.Error($"Error executing subscribe command: {ex.Message}");
-            return 1;
+            logger.Debug($"Subscribe command exception details: {ex}");
         }
+
+        return 1;
     }
 
     /// <summary>
@@ -104,19 +123,19 @@ public class SubscribeCommand(
     /// <param name="options">The subscribe command options.</param>
     /// <param name="endTime">The calculated end time for the subscription.</param>
     /// <returns>The constructed EmailSubscription.</returns>
-    private static EmailSubscriptionParams BuildEmailSubscription(SubscribeOptions options, DateTime? endTime)
+    private static EmailSubscription BuildEmailSubscription(SubscribeOptions options)
     {
-        // Auto-generate name if not provided
-        var subscriptionName = options.Name
-            ?? $"subscription-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..8]}";
-
         // Use the extension method to convert to EmailFilter
         // Both --query and individual flags will be combined for comprehensive filtering
         var filter = options.ToEmailFilter();
-
-        return new EmailSubscriptionParams
+        
+        // Calculate duration if specified
+        var duration = ParseDuration(options.Duration);
+        var endTime = duration.HasValue ? DateTime.UtcNow.Add(duration.Value) : (DateTime?)null;
+        
+        return new EmailSubscription
         {
-            Name = subscriptionName,
+            Name = options.Name ?? string.Empty,
             TopicName = options.TopicName ?? string.Empty,
             Filter = filter,
             CallbackUrl = options.WebhookUrl,
@@ -138,6 +157,12 @@ public class SubscribeCommand(
         if (options.UsePushNotifications)
         {
             // Push mode validation
+            if (string.IsNullOrWhiteSpace(options.Name))
+            {
+                logger.Error("Name is required when using push notifications. Use --name option.");
+                isValid = false;
+            }
+            
             if (string.IsNullOrEmpty(options.TopicName))
             {
                 logger.Error("Topic name is required when using push notifications. Use --topic option.");
@@ -176,6 +201,12 @@ public class SubscribeCommand(
             {
                 irrelevantParams.Add("--setup-watch (watch setup is not used in polling mode)");
             }
+
+            // PubSubSecretPath is only relevant for push mode (Pub/Sub operations)
+            if (!string.IsNullOrEmpty(options.PubsubSecretPath))
+            {
+                irrelevantParams.Add("--pubsub-secret-path (Pub/Sub credentials are not used in polling mode)");
+            }
         }
 
         // Log warnings for irrelevant parameters
@@ -190,243 +221,6 @@ public class SubscribeCommand(
         }
 
         return isValid;
-    }
-
-    /// <summary>
-    /// Sets up push notifications for the subscription.
-    /// </summary>
-    /// <param name="subscription">The subscription configuration.</param>
-    /// <param name="options">The command options.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    private async Task SetupPushNotificationsAsync(
-        EmailSubscriptionParams subscription,
-        SubscribeOptions options,
-        CancellationToken cancellationToken)
-    {
-            logger.Warning("Push notifications are not yet implemented. Please use polling mode.");
-        
-        if (options.SetupWatch)
-        {
-            logger.Info("Setting up Gmail watch and starting email monitoring...");
-
-            // Create a cancellation token source for coordinated cancellation
-            using var watchCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-            // Start watch management in background
-            var watchTask = StartWatchManagementAsync(options, subscription.EndTime, watchCts.Token);
-
-            try
-            {
-                // Start email monitoring as the master task
-                await StartEmailMonitoringAsync(subscription, options, cancellationToken);
-            }
-            catch
-            {
-                // If monitoring fails, cancel the watch management
-                logger.Info("Stopping watch management due to monitoring failure...");
-                watchCts.Cancel();
-                throw;
-            }
-            finally
-            {
-                // Ensure watch management is stopped and we wait for cleanup
-                watchCts.Cancel();
-                try
-                {
-                    await watchTask;
-                }
-                catch (OperationCanceledException) { /* Expected */ }
-                catch (Exception ex)
-                {
-                    logger.Warning($"Error during watch management cleanup: {ex.Message}");
-                }
-            }
-        }
-        else
-        {
-            await StartEmailMonitoringAsync(subscription, options, cancellationToken);
-        }
-    }
-
-    /// <summary>
-    /// Starts Gmail watch management in the background.
-    /// </summary>
-    /// <param name="options">The command options.</param>
-    /// <param name="endTime">When to stop managing watches (null for indefinite).</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    private async Task StartWatchManagementAsync(
-        SubscribeOptions options,
-        DateTime? endTime,
-        CancellationToken cancellationToken)
-    {
-        GmailWatchManager? watchManager = null;
-        try
-        {
-            var watchAppName = options.Name ?? AppDomain.CurrentDomain.FriendlyName;
-            watchManager = new GmailWatchManager(gmailService, logger, watchAppName);
-            await watchManager.StartWatchManagementAsync(
-                topicName: options.TopicName!,
-                labelIds: Utils.ParseLabels(options.Labels ?? string.Empty),
-                endTime: endTime,
-                cancellationToken: cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger.Error($"Gmail watch management failed: {ex.Message}");
-            throw;
-        }
-        finally
-        {
-            if (watchManager != null)
-            {
-                await watchManager.StopWatchManagementAsync();
-                watchManager.Dispose();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Starts email monitoring using push notifications via EmailSubscriber.
-    /// This method sets up real push notification handling instead of polling.
-    /// </summary>
-    /// <param name="subscription">The subscription configuration.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <param name="options">The subscribe command options for output configuration.</param>
-    private async Task StartEmailMonitoringAsync(
-        EmailSubscriptionParams subscription,
-        SubscribeOptions options,
-        CancellationToken cancellationToken)
-    {
-        logger.Info("Starting email monitoring (push notification mode)...");
-
-        // TODO: Implement push notification listener setup
-        // This would typically involve:
-        // 1. Setting up Pub/Sub subscription listener
-        // 2. Configuring message handler for incoming notifications
-        // 3. Processing Gmail history IDs from push notifications
-        // 4. Fetching actual email content when notifications arrive
-
-        try
-        {
-            // Start the push notification listener
-            var messageStream = emailSubscriber.StartPushNotificationListenerAsync(
-                subscription, cancellationToken);
-
-            logger.Info("Push notification listener started successfully");
-
-            // Create a cancellation token that respects the duration
-            using var durationCts = new CancellationTokenSource();
-            if (subscription.EndTime.HasValue)
-            {
-                var remainingTime = subscription.EndTime.Value - DateTime.UtcNow;
-                if (remainingTime > TimeSpan.Zero)
-                {
-                    durationCts.CancelAfter(remainingTime);
-                    logger.Info($"Push notifications will stop at: {subscription.EndTime.Value:yyyy-MM-dd HH:mm:ss}");
-                }
-                else
-                {
-                    logger.Warning("End time has already passed.");
-                    return;
-                }
-            }
-            else
-            {
-                logger.Info("Push notifications will run indefinitely. Press Ctrl+C to stop.");
-            }
-
-            using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, durationCts.Token);
-
-            // Process messages from the push notification stream
-            await foreach (var messageBatch in messageStream.WithCancellation(combinedCts.Token))
-            {
-                if (messageBatch.Count > 0)
-                {
-                    logger.Info($"Received {messageBatch.Count} new emails!");
-
-                    // Only output email details if output file is specified
-                    if (!string.IsNullOrEmpty(options.Output))
-                    {
-                        await OutputEmailsAsync(messageBatch, options, cancellationToken);
-                    }
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            logger.Info("Push notification monitoring cancelled.");
-        }
-        catch (NotImplementedException)
-        {
-            logger.Error("Push notifications are not yet implemented in EmailSubscriber.");
-            throw;
-        }
-        finally
-        {
-            // Stop the push notification listener
-            try
-            {
-                emailSubscriber.Stop();
-                logger.Info("Push notification listener stopped.");
-            }
-            catch (Exception ex)
-            {
-                logger.Warning($"Error stopping push notification listener: {ex.Message}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Starts polling for emails.
-    /// </summary>
-    /// <param name="subscription">The subscription configuration.</param>
-    /// <param name="options">The command options.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    private async Task StartPollingAsync(EmailSubscriptionParams subscription, SubscribeOptions options, CancellationToken cancellationToken)
-    {
-        var messageStream = emailPoller.StartPollingAsync(subscription, cancellationToken);
-        logger.Info($"Starting email polling every {subscription.PollingIntervalSeconds} seconds");
-
-        if (subscription.EndTime.HasValue)
-        {
-            logger.Info($"Polling will stop at: {subscription.EndTime.Value:yyyy-MM-dd HH:mm:ss}");
-        }
-        else
-        {
-            logger.Info("Polling will run indefinitely. Press Ctrl+C to stop.");
-        }
-
-        // Create a cancellation token that respects the duration
-        using var durationCts = new CancellationTokenSource();
-        if (subscription.EndTime.HasValue)
-        {
-            var remainingTime = subscription.EndTime.Value - DateTime.UtcNow;
-            if (remainingTime > TimeSpan.Zero)
-            {
-                durationCts.CancelAfter(remainingTime);
-            }
-            else
-            {
-                logger.Warning("End time has already passed.");
-                return;
-            }
-        }
-
-        using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, durationCts.Token);
-
-        await foreach (var emails in messageStream.WithCancellation(combinedCts.Token))
-        {
-            if (emails.Count > 0)
-            {
-                logger.Info($"Received {emails.Count} new emails!");
-
-                // Only output email details if output file is specified
-                if (!string.IsNullOrEmpty(options.Output))
-                {
-                    await OutputEmailsAsync(emails, options, cancellationToken);
-                }
-            }
-        }
     }
 
     /// <summary>
@@ -461,13 +255,18 @@ public class SubscribeCommand(
     /// <param name="emails">The emails to output.</param>
     /// <param name="options">The subscribe command options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    private async Task OutputEmailsAsync(List<EmailMessage> emails, SubscribeOptions options, CancellationToken cancellationToken = default)
+    private async Task OutputEmailsAsync(
+        IReadOnlyCollection<EmailMessage> emails,
+        SubscribeOptions options,
+        CancellationToken cancellationToken = default)
     {
         // Determine if we're writing to file or console
         var writeToFile = !string.IsNullOrEmpty(options.Output) && options.Output != "-";
 
         if (writeToFile)
         {
+            logger.Debug($"Writing email details to file: {options.Output}");
+
             // Write to file
             await using var fileStream = new FileStream(options.Output!, FileMode.Append, FileAccess.Write);
             await using var writer = new StreamWriter(fileStream);
@@ -487,6 +286,8 @@ public class SubscribeCommand(
         }
         else
         {
+            logger.Debug("Writing email details to console.");
+            
             // Write to console (when OutputFile is "-")
             OutputEmailsToStream(emails, options);
         }
@@ -494,6 +295,7 @@ public class SubscribeCommand(
         // Send webhook notification if configured
         if (!string.IsNullOrEmpty(options.WebhookUrl))
         {
+            logger.Debug($"Sending webhook notification to {options.WebhookUrl} for {emails.Count} new emails...");
             _ = Task.Run(() => SendWebhookNotificationAsync(emails, options.WebhookUrl), cancellationToken);
         }
     }
@@ -503,7 +305,9 @@ public class SubscribeCommand(
     /// </summary>
     /// <param name="emails">The emails to output.</param>
     /// <param name="options">The command options.</param>
-    private static void OutputEmailsToStream(List<EmailMessage> emails, SubscribeOptions options)
+    private static void OutputEmailsToStream(
+        IReadOnlyCollection<EmailMessage> emails,
+        SubscribeOptions options)
     {
         foreach (var email in emails)
         {
@@ -525,13 +329,13 @@ public class SubscribeCommand(
             Console.WriteLine(new string('-', 50));
         }
     }
-    
+
     /// <summary>
     /// Sends a webhook notification for new emails.
     /// </summary>
     /// <param name="emails">The new emails.</param>
     /// <param name="webhookUrl">The webhook URL.</param>
-    private async Task SendWebhookNotificationAsync(List<EmailMessage> emails, string webhookUrl)
+    private async Task SendWebhookNotificationAsync(IReadOnlyCollection<EmailMessage> emails, string webhookUrl)
     {
         try
         {

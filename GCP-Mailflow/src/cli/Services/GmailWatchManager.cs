@@ -1,8 +1,8 @@
 using DCiuve.Gcp.ExtensionDomain;
+using DCiuve.Gcp.ExtensionDomain.Gmail;
 using DCiuve.Gcp.Mailflow.Services;
 using DCiuve.Gcp.PubSub;
 using DCiuve.Shared.Logging;
-using Google.Apis.Gmail.v1;
 
 namespace DCiuve.Gcp.Mailflow.Cli.Services;
 
@@ -10,9 +10,9 @@ namespace DCiuve.Gcp.Mailflow.Cli.Services;
 /// Manages Gmail watch lifecycle including creation, renewal, and expiration handling.
 /// </summary>
 public class GmailWatchManager(
-    GmailService gmailService,
+    IGmailClient gmailClient,
     ILogger logger,
-    string applicationName = "My-Gmail-Client-CLI"
+    string applicationName
 ) : IDisposable
 {
     /// <summary>
@@ -31,7 +31,7 @@ public class GmailWatchManager(
     private const int WatchRenewalAdvanceMinutes = 15;
     
 	private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    private readonly GmailWatchBroker _watchBroker = new(gmailService, applicationName);
+    private readonly GmailWatchBroker _watchBroker = new(gmailClient, applicationName);
     private Timer? _renewalTimer;
     private bool _disposed;
     private bool _owningWatch;
@@ -76,7 +76,7 @@ public class GmailWatchManager(
         }
         catch (OperationCanceledException)
         {
-            _logger.Info("Gmail watch management cancelled.");
+            _logger.Debug("Gmail watch management cancellation requested.");
         }
     }
 
@@ -92,14 +92,14 @@ public class GmailWatchManager(
         // Cancel the watch if we own it
         if (_owningWatch && !string.IsNullOrEmpty(_ownedWatchId))
         {
-            _logger.Info("Cancelling Gmail watch since we own it...");
+            _logger.Debug("Cancelling Gmail watch since we own it...");
             try
             {
                 var stopped = await _watchBroker.StopPushNotificationsAsync();
                 if (stopped)
                 {
                     await _watchBroker.ClearWatchStateAsync();
-                    _logger.Info("Owned Gmail watch cancelled successfully.");
+                    _logger.Debug("Owned Gmail watch cancelled successfully.");
                 }
                 else
                 {
@@ -113,11 +113,11 @@ public class GmailWatchManager(
         }
         else if (_owningWatch)
         {
-            _logger.Info("We own the watch but no watch ID available to cancel.");
+            _logger.Warning("We own the watch but no watch ID available to cancel.");
         }
         else
         {
-            _logger.Info("Using existing watch, leaving it active.");
+            _logger.Debug("Using existing watch, leaving it active.");
         }
         
         _logger.Info("Gmail watch management stopped.");

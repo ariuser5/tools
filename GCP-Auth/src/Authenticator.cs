@@ -7,7 +7,7 @@ namespace DCiuve.Gcp.Auth;
 public class Authenticator
 {
 	const string DefaultUser = "user";
-	const string DefaultCredentialsPath = "token";
+	const string DefaultCredentialsPath = "gcp_token";
 
 	public static async Task<UserCredential> Authenticate(
 		string secretJson,
@@ -31,12 +31,23 @@ public class Authenticator
 		var googleSecrets = GoogleClientSecrets.FromStream(secretStream);
 		return await Authenticate(googleSecrets.Secrets, scopes, user, credentialsPath, cancellationToken);
 	}
-	
+
 	public static async Task<UserCredential> Authenticate(
 		ClientSecrets secrets,
 		IEnumerable<string> scopes,
 		string user = DefaultUser,
 		string credentialsPath = DefaultCredentialsPath,
+		CancellationToken cancellationToken = default)
+	{
+		var dataStore = new FileDataStore(credentialsPath, true);
+		return await Authenticate(secrets, scopes, user, dataStore, cancellationToken);
+	}
+	
+	public static async Task<UserCredential> Authenticate(
+		ClientSecrets secrets,
+		IEnumerable<string> scopes,
+		string user = DefaultUser,
+		IDataStore? dataStore = null,
 		CancellationToken cancellationToken = default)
 	{
 		UserCredential credential;
@@ -45,7 +56,7 @@ public class Authenticator
 			scopes: scopes,
 			user: user,
 			taskCancellationToken: cancellationToken,
-			dataStore: new FileDataStore(credentialsPath, true)
+			dataStore: dataStore
 		).ConfigureAwait(false);
 
 		return credential;
