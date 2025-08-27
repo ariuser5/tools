@@ -2,3 +2,5 @@
 - Extract whole GCP into a separate repository
   OR - put all GCP in a folder
 - Update logging options to allow flag counter (-v, -vv, -vvv)
+- Check OutputEmailsAsync, it might be unfit for multithreading.
+- Refactor Mailflow>Program.cs such that Output method is used by both commands, not duplicated.

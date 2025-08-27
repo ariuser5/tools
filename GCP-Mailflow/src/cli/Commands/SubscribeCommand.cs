@@ -58,7 +58,8 @@ public record SubscribeOptions : BaseOptions
 
 public class SubscribeCommand(
     ILogger logger,
-    ISubscriptionStrategy subscriptionStrategy)
+    ISubscriptionStrategy subscriptionStrategy,
+    Func<EmailMessage, CancellationToken, Task> output)
 {
     /// <summary>
     /// Executes the subscribe command.
@@ -98,7 +99,16 @@ public class SubscribeCommand(
 
         using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, durationCts.Token);
 
-        subscriptionStrategy.OutputAction = (emails, ct) => OutputEmailsAsync(emails, options, ct);
+        subscriptionStrategy.OutputAction = async (emails, ct) =>
+        {
+            foreach (var email in emails)
+            {
+                await output(email, ct);
+            }
+            
+            if (options.WebhookUrl == null) return;
+            await SendWebhookNotificationAsync(emails, options.WebhookUrl);
+        };
 
         try
         {
@@ -270,87 +280,6 @@ public class SubscribeCommand(
             "d" => TimeSpan.FromDays(value),
             _ => null
         };
-    }
-
-    /// <summary>
-    /// Outputs the received emails to the specified output file or console.
-    /// </summary>
-    /// <param name="emails">The emails to output.</param>
-    /// <param name="options">The subscribe command options.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    private async Task OutputEmailsAsync(
-        IReadOnlyCollection<EmailMessage> emails,
-        SubscribeOptions options,
-        CancellationToken cancellationToken = default)
-    {
-        // Determine if we're writing to file or console
-        var writeToFile = !string.IsNullOrEmpty(options.Output) && options.Output != "-";
-
-        if (writeToFile)
-        {
-            logger.Debug($"Writing email details to file: {options.Output}");
-
-            // Write to file
-            await using var fileStream = new FileStream(options.Output!, FileMode.Append, FileAccess.Write);
-            await using var writer = new StreamWriter(fileStream);
-
-            // Temporarily redirect Console.Out to the file
-            var originalOut = Console.Out;
-            Console.SetOut(writer);
-
-            try
-            {
-                OutputEmailsToStream(emails, options);
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
-        }
-        else
-        {
-            logger.Debug("Writing email details to console.");
-            
-            // Write to console (when OutputFile is "-")
-            OutputEmailsToStream(emails, options);
-        }
-
-        // Send webhook notification if configured
-        if (!string.IsNullOrEmpty(options.WebhookUrl))
-        {
-            logger.Debug($"Sending webhook notification to {options.WebhookUrl} for {emails.Count} new emails...");
-            _ = Task.Run(() => SendWebhookNotificationAsync(emails, options.WebhookUrl), cancellationToken);
-        }
-    }
-
-    /// <summary>
-    /// Outputs emails to the current output stream.
-    /// </summary>
-    /// <param name="emails">The emails to output.</param>
-    /// <param name="options">The command options.</param>
-    private static void OutputEmailsToStream(
-        IReadOnlyCollection<EmailMessage> emails,
-        SubscribeOptions options)
-    {
-        foreach (var email in emails)
-        {
-            Console.WriteLine($"\n🔔 New Email Alert - {DateTime.Now:HH:mm:ss}");
-            Console.WriteLine($"Subject: {email.Subject}");
-            Console.WriteLine($"From: {email.From}");
-            Console.WriteLine($"Date: {email.Date:yyyy-MM-dd HH:mm:ss}");
-
-            if (options.Verbosity > LogLevel.Info)
-            {
-                Console.WriteLine($"ID: {email.Id}");
-                Console.WriteLine($"Labels: {string.Join(", ", email.Labels)}");
-                if (!string.IsNullOrEmpty(email.Snippet))
-                {
-                    Console.WriteLine($"Snippet: {email.Snippet}");
-                }
-            }
-
-            Console.WriteLine(new string('-', 50));
-        }
     }
 
     /// <summary>

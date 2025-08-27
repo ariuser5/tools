@@ -29,7 +29,7 @@ public class Application : IDependencyProvider
 			{
 				return new SuppressibleLogger(stdLogger)
 				{
-					isSilent = silentOptions.Silent
+					IsSilent = silentOptions.Silent
 				};
 			}
 

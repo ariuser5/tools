@@ -20,11 +20,11 @@ public class SuppressibleLogger : ILogger
         set => _innerLogger.Verbosity = value; 
     }
     
-    public bool isSilent { get; set; }
+    public bool IsSilent { get; set; }
 
     public void Debug(string message, params object[] args)
     {
-        if (!isSilent)
+        if (!IsSilent)
         {
             _innerLogger.Debug(message, args);
         }
@@ -32,7 +32,7 @@ public class SuppressibleLogger : ILogger
 
     public void Info(string message, params object[] args)
     {
-        if (!isSilent)
+        if (!IsSilent)
         {
             _innerLogger.Info(message, args);
         }
@@ -40,7 +40,7 @@ public class SuppressibleLogger : ILogger
 
     public void Warning(string message, params object[] args)
     {
-        if (!isSilent)
+        if (!IsSilent)
         {
             _innerLogger.Warning(message, args);
         }
