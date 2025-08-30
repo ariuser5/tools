@@ -48,9 +48,26 @@ return Application.Run(MyMethod, options);
 
 ## Integration
 
+### NuGet Package Reference (Recommended)
+
+Add the GitHub Packages feed to your `nuget.config`:
+
 ```xml
-<ProjectReference Include="path\to\DCiuve.Shared.csproj" />
+<configuration>
+    <packageSources>
+        <add key="github" value="https://nuget.pkg.github.com/ariuser5/index.json" />
+        <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    </packageSources>
+</configuration>
 ```
+
+Then add the package reference to your `.csproj`:
+
+```xml
+<PackageReference Include="DCiuve.Shared" Version="1.0.1" />
+```
+
+> **Note:** You may need to authenticate with a GitHub token to restore packages. See GitHub Packages documentation for details.
 
 ```csharp
 using DCiuve.Shared.Logging;

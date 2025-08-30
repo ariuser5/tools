@@ -14,7 +14,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\DCiuve-Shared\src\DCiuve.Shared.csproj" />
+    <PackageReference Include="DCiuve.Shared" Version="1.0.1" />
     <ProjectReference Include="..\..\GCP-Auth\src\Gcp.Auth.csproj" />
     <ProjectReference Include="..\..\GCP-ExtensionDomain\src\Gcp.ExtensionDomain.csproj" />
   </ItemGroup>

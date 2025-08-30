@@ -2,15 +2,18 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <AssemblyName>DCiuve.Shared</AssemblyName>
-    <RootNamespace>DCiuve.Shared</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>DCiuve.Shared</AssemblyName>
+    <RootNamespace>DCiuve.Shared</RootNamespace>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageId>DCiuve.Shared</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>DCiuve</Authors>
-    <Description>A simple, colored console logger for .NET applications</Description>
+    <PackageProjectUrl>https://github.com/ariuser5/tools</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ariuser5/tools</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Version>1.0.1</Version>
+    <Authors>ariuser5</Authors>
+    <Description>Shared utilities for DCiuve projects.</Description>
   </PropertyGroup>
   
   <ItemGroup>
