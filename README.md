@@ -1,3 +1,6 @@
+# *** DEPRECATED*** 
+
+
 # Development Tools Collection
 
 A collection of command-line tools for Google Cloud Platform integration and other utilities.
